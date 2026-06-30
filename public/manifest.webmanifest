@@ -1,0 +1,33 @@
+{
+  "name": "SOLINT SEGUROS",
+  "short_name": "SOLINT SEGUROS",
+  "description": "Sistema inteligente para la gestión de SCTR y Vida Ley desarrollado por SOLINT Business Systems.",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f7fb",
+  "theme_color": "#005eb8",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "es-PE",
+  "icons": [
+    {
+      "src": "/images/solint-business-systems-c.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/solint-business-systems-c.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/solint-business-systems-c.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

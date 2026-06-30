@@ -1,0 +1,21 @@
+IMPORTANTE:
+Para que el módulo Comparador registre historial, agrega este import en:
+src/app/(dashboard)/comparador/page.tsx
+
+import { addProcessHistory } from "@/lib/process-history";
+
+Y después de setTablaVidaLey(respuesta.tramaVidaLey); dentro de handleComparar, agrega:
+
+addProcessHistory({
+  type: "COMPARAR_TRAMAS",
+  title: "Comparación General vs acumulados",
+  description: "Se generaron tramas SCTR y VidaLey y acumulados actualizados.",
+  status: respuesta.coincidenCantidades ? "OK" : "ADVERTENCIA",
+  metrics: {
+    totalGeneral: respuesta.totalGeneral,
+    nuevosSctr: respuesta.nuevosSctr,
+    nuevosVidaLey: respuesta.nuevosVidaLey,
+  },
+});
+
+En la próxima fase te puedo enviar el archivo comparador completo ya integrado si prefieres.
