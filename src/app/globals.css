@@ -2,57 +2,45 @@
 
 :root {
   --background: #f4f7fb;
-  --foreground: #061a3a;
-  --solint-blue: #005eb8;
-  --solint-navy: #04224a;
-  --solint-orange: #ff7415;
+  --foreground: #0f172a;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
-  min-height: 100%;
-  background: var(--background);
-  color: var(--foreground);
-  overflow-x: hidden;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
 button,
-input,
-select {
-  font-family: inherit;
+a,
+label,
+select,
+input {
+  outline: none;
 }
 
 button,
 label,
-a {
-  -webkit-tap-highlight-color: transparent;
+select,
+input[type="file"] {
+  cursor: pointer;
 }
 
-input,
-select {
-  outline: none;
-}
-
-img,
-svg,
-canvas,
-video,
-iframe {
-  max-width: 100%;
+button:disabled {
+  cursor: not-allowed;
 }
 
 .solint-scrollbar::-webkit-scrollbar {
-  height: 12px;
-  width: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .solint-scrollbar::-webkit-scrollbar-track {
@@ -61,28 +49,69 @@ iframe {
 }
 
 .solint-scrollbar::-webkit-scrollbar-thumb {
-  background: #a8b3c5;
+  background: #b8c4d4;
   border-radius: 999px;
 }
 
 .solint-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #94a3b8;
 }
 
-@keyframes matheito-float {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
+@keyframes solintPulse {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
   }
-
   50% {
-    transform: translateY(-4px) rotate(-1deg);
+    transform: scale(1.025);
+    filter: brightness(1.08);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
   }
 }
 
-@media (max-width: 640px) {
-  .solint-scrollbar::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
+@keyframes solintGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 116, 21, 0);
   }
+  50% {
+    box-shadow: 0 0 26px rgba(255, 116, 21, 0.28);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(255, 116, 21, 0);
+  }
+}
+
+@keyframes solintShimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.solint-glow {
+  animation: solintGlow 2.4s ease-in-out infinite;
+}
+
+.solint-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.solint-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: solintShimmer 1.6s infinite;
 }
