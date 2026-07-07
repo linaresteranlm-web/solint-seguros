@@ -18,8 +18,11 @@ export function PeopleFilterBar({
   onChange: (filters: PeopleFilters) => void;
 }) {
   const sedes = uniqueValues(dataset, "Sede");
+  const areas = uniqueValues(dataset, "Area");
   const cargos = uniqueValues(dataset, "Cargo");
   const estados = uniqueValues(dataset, "Estado");
+  const departamentos = uniqueValues(dataset, "Departamento");
+  const provincias = uniqueValues(dataset, "Provincia");
 
   function update<K extends keyof PeopleFilters>(key: K, value: string) {
     onChange({
@@ -40,30 +43,18 @@ export function PeopleFilterBar({
               Filtros dinámicos
             </p>
             <h2 className="mt-1 text-xl font-black text-[#04224a]">
-              Segmenta el análisis
+              DATA GENERAL
             </h2>
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <FilterSelect
-            label="Sede"
-            value={filters.sede}
-            options={sedes}
-            onChange={(value) => update("sede", value)}
-          />
-          <FilterSelect
-            label="Cargo"
-            value={filters.cargo}
-            options={cargos}
-            onChange={(value) => update("cargo", value)}
-          />
-          <FilterSelect
-            label="Estado"
-            value={filters.estado}
-            options={estados}
-            onChange={(value) => update("estado", value)}
-          />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <FilterSelect label="Sede" value={filters.sede} options={sedes} onChange={(value) => update("sede", value)} />
+          <FilterSelect label="Área" value={filters.area} options={areas} onChange={(value) => update("area", value)} />
+          <FilterSelect label="Cargo" value={filters.cargo} options={cargos} onChange={(value) => update("cargo", value)} />
+          <FilterSelect label="Estado" value={filters.estado} options={estados} onChange={(value) => update("estado", value)} />
+          <FilterSelect label="Departamento" value={filters.departamento} options={departamentos} onChange={(value) => update("departamento", value)} />
+          <FilterSelect label="Provincia" value={filters.provincia} options={provincias} onChange={(value) => update("provincia", value)} />
         </div>
 
         <button
@@ -102,7 +93,7 @@ function FilterSelect({
       >
         <option value="TODOS">Todos</option>
         {options.map((option) => (
-          <option key={option} value={option}>
+          <option key={`${label}-${option}`} value={option}>
             {option}
           </option>
         ))}

@@ -2,11 +2,18 @@
 
 import { AnalyticsDataset } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
+import {
+  normalizeDataGeneralRow,
+  normalizeDataGeneralRows,
+} from "@/lib/analytics/data-general-adapter";
 
 export type PeopleFilters = {
   sede: string;
+  area: string;
   cargo: string;
   estado: string;
+  departamento: string;
+  provincia: string;
 };
 
 export type RankingItem = {
@@ -21,15 +28,22 @@ export type PeopleDashboardResult = {
   totalRows: number;
   totalSedes: number;
   totalCargos: number;
+  totalAreas: number;
+  totalDepartamentos: number;
   estadoDistribution: RankingItem[];
   sedeRanking: RankingItem[];
   cargoRanking: RankingItem[];
+  areaRanking: RankingItem[];
+  departamentoRanking: RankingItem[];
 };
 
 export const EMPTY_PEOPLE_FILTERS: PeopleFilters = {
   sede: "TODOS",
+  area: "TODOS",
   cargo: "TODOS",
   estado: "TODOS",
+  departamento: "TODOS",
+  provincia: "TODOS",
 };
 
 function text(value: unknown) {
@@ -42,11 +56,12 @@ function matchesFilter(value: unknown, filter: string) {
   return text(value).toLowerCase() === filter.toLowerCase();
 }
 
-export function uniqueValues(dataset: AnalyticsDataset, column: string) {
+export function uniqueValues(dataset: AnalyticsDataset, normalizedColumn: keyof ReturnType<typeof normalizeDataGeneralRow>) {
   const values = new Set<string>();
 
   dataset.rows.forEach((row) => {
-    const value = text(row[column]);
+    const normalized = normalizeDataGeneralRow(row);
+    const value = text(normalized[normalizedColumn]);
 
     if (value) values.add(value);
   });
@@ -55,8 +70,8 @@ export function uniqueValues(dataset: AnalyticsDataset, column: string) {
 }
 
 function buildRanking(
-  rows: Record<string, unknown>[],
-  column: string,
+  rows: ReturnType<typeof normalizeDataGeneralRows>,
+  column: keyof ReturnType<typeof normalizeDataGeneralRow>,
   limit = 7
 ): RankingItem[] {
   const map = new Map<string, number>();
@@ -71,7 +86,8 @@ function buildRanking(
     .map(([label, total]) => ({
       label,
       total,
-      percentage: rows.length > 0 ? Number(((total / rows.length) * 100).toFixed(1)) : 0,
+      percentage:
+        rows.length > 0 ? Number(((total / rows.length) * 100).toFixed(1)) : 0,
     }))
     .sort((a, b) => b.total - a.total)
     .slice(0, limit);
@@ -81,28 +97,43 @@ export function buildPeopleDashboard(
   dataset: AnalyticsDataset,
   filters: PeopleFilters
 ): PeopleDashboardResult {
-  const filteredRows = dataset.rows.filter((row) => {
+  const normalizedRows = normalizeDataGeneralRows(dataset.rows);
+
+  const filteredOriginalRows = dataset.rows.filter((row, index) => {
+    const normalized = normalizedRows[index];
+
     return (
-      matchesFilter(row["Sede"], filters.sede) &&
-      matchesFilter(row["Cargo"], filters.cargo) &&
-      matchesFilter(row["Estado"], filters.estado)
+      matchesFilter(normalized.Sede, filters.sede) &&
+      matchesFilter(normalized.Area, filters.area) &&
+      matchesFilter(normalized.Cargo, filters.cargo) &&
+      matchesFilter(normalized.Estado, filters.estado) &&
+      matchesFilter(normalized.Departamento, filters.departamento) &&
+      matchesFilter(normalized.Provincia, filters.provincia)
     );
   });
+
+  const filteredNormalizedRows = filteredOriginalRows.map(normalizeDataGeneralRow);
 
   const filteredDataset: AnalyticsDataset = {
     ...dataset,
     id: `${dataset.id}-filtered`,
-    rows: filteredRows,
+    rows: filteredOriginalRows,
   };
 
   return {
     filteredDataset,
     analytics: runPeopleAnalytics(filteredDataset),
-    totalRows: filteredRows.length,
-    totalSedes: uniqueValues(filteredDataset, "Sede").length,
-    totalCargos: uniqueValues(filteredDataset, "Cargo").length,
-    estadoDistribution: buildRanking(filteredRows, "Estado", 10),
-    sedeRanking: buildRanking(filteredRows, "Sede", 8),
-    cargoRanking: buildRanking(filteredRows, "Cargo", 8),
+    totalRows: filteredOriginalRows.length,
+    totalSedes: new Set(filteredNormalizedRows.map((row) => row.Sede).filter(Boolean)).size,
+    totalCargos: new Set(filteredNormalizedRows.map((row) => row.Cargo).filter(Boolean)).size,
+    totalAreas: new Set(filteredNormalizedRows.map((row) => row.Area).filter(Boolean)).size,
+    totalDepartamentos: new Set(
+      filteredNormalizedRows.map((row) => row.Departamento).filter(Boolean)
+    ).size,
+    estadoDistribution: buildRanking(filteredNormalizedRows, "Estado", 10),
+    sedeRanking: buildRanking(filteredNormalizedRows, "Sede", 8),
+    cargoRanking: buildRanking(filteredNormalizedRows, "Cargo", 8),
+    areaRanking: buildRanking(filteredNormalizedRows, "Area", 8),
+    departamentoRanking: buildRanking(filteredNormalizedRows, "Departamento", 8),
   };
 }

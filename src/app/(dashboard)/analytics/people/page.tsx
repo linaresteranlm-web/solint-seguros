@@ -25,8 +25,8 @@ import { showToast } from "@/lib/toast-store";
 
 const initialSteps: AnalyticsProgressStep[] = [
   { id: "read", label: "Leyendo archivo", status: "pending" },
-  { id: "structure", label: "Analizando estructura", status: "pending" },
-  { id: "validation", label: "Validando datos", status: "pending" },
+  { id: "structure", label: "Detectando cabecera real", status: "pending" },
+  { id: "validation", label: "Validando DATA GENERAL", status: "pending" },
   { id: "kpis", label: "Calculando KPIs", status: "pending" },
   { id: "insights", label: "Generando Insights", status: "pending" },
   { id: "recommendations", label: "Generando Recomendaciones", status: "pending" },
@@ -114,8 +114,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "People Analytics generado",
-        description: "Dashboard ejecutivo creado desde DATA GENERAL.",
+        title: "DATA GENERAL procesado",
+        description: "People Analytics fue generado con el formato real.",
         variant: "success",
       });
     } catch (error) {
@@ -159,11 +159,12 @@ export default function PeopleAnalyticsPage() {
               People Analytics
             </p>
             <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-              Dashboard Ejecutivo de Personas
+              Dashboard Ejecutivo de DATA GENERAL
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga DATA GENERAL para generar un dashboard ejecutivo con filtros,
-              rankings, KPIs, insights y recomendaciones automáticas.
+              Carga el archivo DATA GENERAL real de Los Halcones. El sistema
+              detecta automáticamente la cabecera, normaliza columnas y genera
+              KPIs, filtros, rankings, insights y recomendaciones.
             </p>
           </div>
 
@@ -231,25 +232,35 @@ export default function PeopleAnalyticsPage() {
               <AnalyticsKpiCard key={kpi.id} kpi={kpi} />
             ))}
             <ExtraMetric label="Registros filtrados" value={dashboard.totalRows} />
-            <ExtraMetric label="Sedes" value={dashboard.totalSedes} />
-            <ExtraMetric label="Cargos" value={dashboard.totalCargos} />
+            <ExtraMetric label="Áreas" value={dashboard.totalAreas} />
+            <ExtraMetric label="Departamentos" value={dashboard.totalDepartamentos} />
           </div>
 
           <div className="grid gap-6 xl:grid-cols-3">
             <PeopleRankingCard
               title="Distribución por Estado"
-              subtitle="Composición del universo filtrado"
+              subtitle="ACTIVO, BAJA u otros estados"
               items={dashboard.estadoDistribution}
             />
             <PeopleRankingCard
               title="Ranking por Sede"
-              subtitle="Concentración de colaboradores por sede"
+              subtitle="Concentración por establecimiento"
               items={dashboard.sedeRanking}
             />
             <PeopleRankingCard
               title="Ranking por Cargo"
-              subtitle="Concentración de colaboradores por cargo"
+              subtitle="Concentración por cargo"
               items={dashboard.cargoRanking}
+            />
+            <PeopleRankingCard
+              title="Ranking por Área"
+              subtitle="Concentración por área"
+              items={dashboard.areaRanking}
+            />
+            <PeopleRankingCard
+              title="Ranking por Departamento"
+              subtitle="Distribución geográfica"
+              items={dashboard.departamentoRanking}
             />
           </div>
 
@@ -262,7 +273,6 @@ export default function PeopleAnalyticsPage() {
     </AnalyticsShell>
   );
 }
-
 function ExtraMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">

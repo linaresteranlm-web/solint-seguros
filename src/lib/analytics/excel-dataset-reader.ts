@@ -28,6 +28,41 @@ function ensureUniqueHeaders(headers: string[]) {
   });
 }
 
+function detectHeaderRow(rowsAsArrays: unknown[][]) {
+  const candidateKeywords = [
+    "Situación",
+    "Codigo",
+    "Ape. Paterno",
+    "Ape. Materno",
+    "Nombres",
+    "Nro Identidad",
+    "FecIng",
+    "Feccese",
+    "Cargo",
+    "Area",
+  ];
+
+  let bestIndex = 0;
+  let bestScore = 0;
+
+  rowsAsArrays.forEach((row, index) => {
+    const values = row.map((value) => String(value ?? "").trim());
+    const nonEmpty = values.filter(Boolean).length;
+    const keywordScore = candidateKeywords.filter((keyword) =>
+      values.some((value) => value.toLowerCase() === keyword.toLowerCase())
+    ).length;
+
+    const score = keywordScore * 10 + nonEmpty;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
+}
+
 export async function readExcelAsAnalyticsDataset(params: {
   file: File;
   domain: AnalyticsDomain;
@@ -63,10 +98,14 @@ export async function readExcelAsAnalyticsDataset(params: {
     throw new Error("El archivo está vacío.");
   }
 
-  const rawHeaders = rowsAsArrays[0].map((value) => String(value ?? "").trim());
+  const headerRowIndex = detectHeaderRow(rowsAsArrays);
+  const rawHeaders = rowsAsArrays[headerRowIndex].map((value) =>
+    String(value ?? "").trim()
+  );
+
   const columns = ensureUniqueHeaders(rawHeaders);
 
-  const rows = rowsAsArrays.slice(1).map((row) => {
+  const rows = rowsAsArrays.slice(headerRowIndex + 1).map((row) => {
     const item: Record<string, unknown> = {};
 
     columns.forEach((column, index) => {
@@ -76,11 +115,15 @@ export async function readExcelAsAnalyticsDataset(params: {
     return item;
   });
 
+  const meaningfulRows = rows.filter((row) =>
+    Object.values(row).some((value) => String(value ?? "").trim() !== "")
+  );
+
   return {
     id: crypto.randomUUID(),
     domain,
     name: file.name,
-    rows,
+    rows: meaningfulRows,
     columns,
     createdAt: new Date().toISOString(),
   };
