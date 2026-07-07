@@ -3,9 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   BarChart3,
-  Download,
-  FileSpreadsheet,
-  FileText,
   PieChart,
   ShieldCheck,
   TrendingUp,
@@ -19,14 +16,8 @@ import {
   inferRotationYear,
   monthName,
 } from "@/lib/analytics/rotation-indicators-engine";
-import {
-  DEFAULT_ROTATION_REPORT_SECTIONS,
-  RotationReportSections,
-  downloadRotationExcel,
-  openRotationPdf,
-} from "@/lib/analytics/rotation-report-export";
 import { AnimatedCounter, MotionReveal } from "@/components/analytics/motion-ui";
-import { showToast } from "@/lib/toast-store";
+import { RotationReportBuilder } from "@/components/analytics/rotation-report-builder";
 
 const MONTH_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as RotationMonth[];
 
@@ -35,7 +26,6 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
   const [year, setYear] = useState(inferredYear);
   const [fromMonth, setFromMonth] = useState<RotationMonth>(1);
   const [toMonth, setToMonth] = useState<RotationMonth>(6);
-  const [sections, setSections] = useState<RotationReportSections>(DEFAULT_ROTATION_REPORT_SECTIONS);
 
   const analysis = useMemo(
     () =>
@@ -46,28 +36,6 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
       }),
     [dataset, year, fromMonth, toMonth]
   );
-
-  function toggleSection(key: keyof RotationReportSections) {
-    setSections((current) => ({ ...current, [key]: !current[key] }));
-  }
-
-  function handlePdf() {
-    openRotationPdf(analysis, sections);
-    showToast({
-      title: "Reporte PDF generado",
-      description: "Se abrió el informe gerencial de rotación en una nueva pestaña.",
-      variant: "success",
-    });
-  }
-
-  function handleExcel() {
-    downloadRotationExcel(analysis);
-    showToast({
-      title: "Excel gerencial descargado",
-      description: "Se generó el archivo Excel con indicadores y rankings de rotación.",
-      variant: "success",
-    });
-  }
 
   return (
     <MotionReveal>
@@ -99,9 +67,11 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
             </div>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-200 bg-slate-50 p-5 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+          <div className="grid gap-4 border-b border-slate-200 bg-slate-50 p-5 lg:grid-cols-3">
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Año</span>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                Año
+              </span>
               <input
                 type="number"
                 value={year}
@@ -111,59 +81,55 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
             </label>
 
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Desde</span>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                Desde
+              </span>
               <select
                 value={fromMonth}
                 onChange={(event) => setFromMonth(Number(event.target.value) as RotationMonth)}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-[#173b76]"
               >
                 {MONTH_OPTIONS.map((month) => (
-                  <option key={month} value={month}>{monthName(month)}</option>
+                  <option key={month} value={month}>
+                    {monthName(month)}
+                  </option>
                 ))}
               </select>
             </label>
 
             <label className="block">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Hasta</span>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                Hasta
+              </span>
               <select
                 value={toMonth}
                 onChange={(event) => setToMonth(Number(event.target.value) as RotationMonth)}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-[#173b76]"
               >
                 {MONTH_OPTIONS.map((month) => (
-                  <option key={month} value={month}>{monthName(month)}</option>
+                  <option key={month} value={month}>
+                    {monthName(month)}
+                  </option>
                 ))}
               </select>
             </label>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handlePdf}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#f58220] px-5 py-3 text-sm font-black text-white transition hover:bg-[#173b76]"
-              >
-                <FileText className="h-4 w-4" />
-                PDF
-              </button>
-              <button
-                type="button"
-                onClick={handleExcel}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#173b76] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0f172a]"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Excel
-              </button>
-            </div>
           </div>
 
           <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-5">
             <Kpi label="HC promedio" value={analysis.summary.averageHeadcount} />
             <Kpi label="Ingresos" value={analysis.summary.totalHires} />
             <Kpi label="Ceses" value={analysis.summary.totalExits} />
-            <Kpi label="Rotación acum." value={analysis.summary.accumulatedRotation} suffix="%" highlight />
+            <Kpi
+              label="Rotación acum."
+              value={analysis.summary.accumulatedRotation}
+              suffix="%"
+              highlight
+            />
             <Kpi label="Variación neta" value={analysis.summary.netChange} />
           </div>
         </div>
+
+        <RotationReportBuilder analysis={analysis} />
 
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <section className="rounded-[1.7rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -187,13 +153,27 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
                 <tbody>
                   {analysis.monthly.map((item) => (
                     <tr key={item.month} className="border-b border-slate-100">
-                      <td className="px-3 py-3 font-black text-[#173b76]">{item.monthName}</td>
-                      <td className="px-3 py-3 font-bold text-slate-600">{item.headcountStart}</td>
-                      <td className="px-3 py-3 font-bold text-slate-600">{item.headcountEnd}</td>
-                      <td className="px-3 py-3 font-bold text-slate-600">{formatNumber(item.averageHeadcount)}</td>
-                      <td className="px-3 py-3 font-bold text-emerald-700">{item.hires}</td>
-                      <td className="px-3 py-3 font-bold text-red-700">{item.exits}</td>
-                      <td className="px-3 py-3 font-black text-[#f58220]">{formatPercent(item.rotationRate)}</td>
+                      <td className="px-3 py-3 font-black text-[#173b76]">
+                        {item.monthName}
+                      </td>
+                      <td className="px-3 py-3 font-bold text-slate-600">
+                        {item.headcountStart}
+                      </td>
+                      <td className="px-3 py-3 font-bold text-slate-600">
+                        {item.headcountEnd}
+                      </td>
+                      <td className="px-3 py-3 font-bold text-slate-600">
+                        {formatNumber(item.averageHeadcount)}
+                      </td>
+                      <td className="px-3 py-3 font-bold text-emerald-700">
+                        {item.hires}
+                      </td>
+                      <td className="px-3 py-3 font-bold text-red-700">
+                        {item.exits}
+                      </td>
+                      <td className="px-3 py-3 font-black text-[#f58220]">
+                        {formatPercent(item.rotationRate)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -204,24 +184,18 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
           <section className="rounded-[1.7rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="mb-5 flex items-center gap-3">
               <PieChart className="h-6 w-6 text-[#f58220]" />
-              <h3 className="text-xl font-black text-[#0f172a]">Reporte a generar</h3>
+              <h3 className="text-xl font-black text-[#0f172a]">Lectura rápida</h3>
             </div>
             <div className="space-y-3">
-              {Object.entries(sections).map(([key, value]) => (
-                <label key={key} className="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white">
-                  <span className="text-sm font-black capitalize text-[#173b76]">{key}</span>
-                  <input
-                    type="checkbox"
-                    checked={value}
-                    onChange={() => toggleSection(key as keyof RotationReportSections)}
-                    className="h-5 w-5 accent-[#f58220]"
-                  />
-                </label>
+              {analysis.insights.slice(0, 5).map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600"
+                >
+                  {item}
+                </div>
               ))}
             </div>
-            <p className="mt-5 text-sm leading-6 text-slate-600">
-              Puedes generar solo el reporte de rotación, con las secciones que necesite gerencia.
-            </p>
           </section>
         </div>
 
@@ -234,7 +208,9 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
         <section className="rounded-[1.7rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
           <div className="mb-5 flex items-center gap-3">
             <TrendingUp className="h-6 w-6 text-[#173b76]" />
-            <h3 className="text-xl font-black text-[#0f172a]">Hallazgos, conclusiones y recomendaciones</h3>
+            <h3 className="text-xl font-black text-[#0f172a]">
+              Hallazgos, conclusiones y recomendaciones
+            </h3>
           </div>
           <div className="grid gap-4 xl:grid-cols-3">
             <TextList title="Hallazgos" items={analysis.insights} />
@@ -247,18 +223,60 @@ export function RotationIndicatorsPanel({ dataset }: { dataset: AnalyticsDataset
   );
 }
 
-function Kpi({ label, value, suffix = "", highlight }: { label: string; value: number; suffix?: string; highlight?: boolean }) {
+function Kpi({
+  label,
+  value,
+  suffix = "",
+  highlight,
+}: {
+  label: string;
+  value: number;
+  suffix?: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className={highlight ? "rounded-3xl bg-[#f58220] p-5 text-white shadow-xl" : "rounded-3xl border border-slate-200 bg-slate-50 p-5"}>
-      <p className={highlight ? "text-xs font-black uppercase tracking-[0.18em] text-orange-50" : "text-xs font-black uppercase tracking-[0.18em] text-slate-400"}>{label}</p>
-      <p className={highlight ? "mt-3 text-4xl font-black text-white" : "mt-3 text-4xl font-black text-[#173b76]"}>
-        <AnimatedCounter value={value} />{suffix}
+    <div
+      className={
+        highlight
+          ? "rounded-3xl bg-[#f58220] p-5 text-white shadow-xl"
+          : "rounded-3xl border border-slate-200 bg-slate-50 p-5"
+      }
+    >
+      <p
+        className={
+          highlight
+            ? "text-xs font-black uppercase tracking-[0.18em] text-orange-50"
+            : "text-xs font-black uppercase tracking-[0.18em] text-slate-400"
+        }
+      >
+        {label}
+      </p>
+      <p
+        className={
+          highlight
+            ? "mt-3 text-4xl font-black text-white"
+            : "mt-3 text-4xl font-black text-[#173b76]"
+        }
+      >
+        <AnimatedCounter value={value} />
+        {suffix}
       </p>
     </div>
   );
 }
 
-function Ranking({ title, items }: { title: string; items: { label: string; rotationRate: number; exits: number; averageHeadcount: number }[] }) {
+function Ranking({
+  title,
+  items,
+}: {
+  title: string;
+  items: {
+    label: string;
+    rotationRate: number;
+    exits: number;
+    averageHeadcount: number;
+  }[];
+}) {
   const max = Math.max(...items.map((item) => item.rotationRate), 1);
 
   return (
@@ -269,12 +287,21 @@ function Ranking({ title, items }: { title: string; items: { label: string; rota
           <div key={item.label}>
             <div className="mb-2 flex items-center justify-between gap-3 text-sm">
               <span className="truncate font-black text-[#0f172a]">{item.label}</span>
-              <span className="shrink-0 font-black text-[#f58220]">{formatPercent(item.rotationRate)}</span>
+              <span className="shrink-0 font-black text-[#f58220]">
+                {formatPercent(item.rotationRate)}
+              </span>
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#173b76] to-[#f58220]" style={{ width: `${Math.max((item.rotationRate / max) * 100, 5)}%` }} />
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#173b76] to-[#f58220]"
+                style={{
+                  width: `${Math.max((item.rotationRate / max) * 100, 5)}%`,
+                }}
+              />
             </div>
-            <p className="mt-1 text-xs font-bold text-slate-500">{item.exits} ceses · HC prom. {formatNumber(item.averageHeadcount)}</p>
+            <p className="mt-1 text-xs font-bold text-slate-500">
+              {item.exits} ceses · HC prom. {formatNumber(item.averageHeadcount)}
+            </p>
           </div>
         ))}
       </div>
