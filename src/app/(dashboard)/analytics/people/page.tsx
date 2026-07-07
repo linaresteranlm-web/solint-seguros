@@ -13,6 +13,7 @@ import { AnalyticsValidationReport } from "@/components/analytics/analytics-vali
 import { PeopleFilterBar } from "@/components/analytics/people-filter-bar";
 import { PeopleRankingCard } from "@/components/analytics/people-ranking-card";
 import { ManagementModeCard } from "@/components/analytics/management-mode-card";
+import { AnalyticsExportActions } from "@/components/analytics/analytics-export-actions";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
@@ -224,6 +225,12 @@ export default function PeopleAnalyticsPage() {
       {activeResult && dashboard && (
         <>
           <ManagementModeCard result={activeResult} dashboard={dashboard} />
+
+          <AnalyticsExportActions
+            result={activeResult}
+            dashboard={dashboard}
+            filters={filters}
+          />
 
           <AnalyticsValidationReport validation={activeResult.validation} />
 
