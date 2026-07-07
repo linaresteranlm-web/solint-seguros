@@ -14,9 +14,11 @@ import { PeopleFilterBar } from "@/components/analytics/people-filter-bar";
 import { PeopleRankingCard } from "@/components/analytics/people-ranking-card";
 import { ManagementModeCard } from "@/components/analytics/management-mode-card";
 import { AnalyticsExportActions } from "@/components/analytics/analytics-export-actions";
+import { PeopleIntelligencePanel } from "@/components/analytics/people-intelligence-panel";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
+import { runPeopleIntelligence } from "@/lib/analytics/people-intelligence-engine";
 import {
   buildPeopleDashboard,
   EMPTY_PEOPLE_FILTERS,
@@ -29,8 +31,8 @@ const initialSteps: AnalyticsProgressStep[] = [
   { id: "structure", label: "Detectando cabecera real", status: "pending" },
   { id: "validation", label: "Validando DATA GENERAL", status: "pending" },
   { id: "kpis", label: "Calculando KPIs", status: "pending" },
-  { id: "insights", label: "Generando Insights", status: "pending" },
-  { id: "recommendations", label: "Generando Recomendaciones", status: "pending" },
+  { id: "insights", label: "Generando Insights consultivos", status: "pending" },
+  { id: "recommendations", label: "Generando People Intelligence", status: "pending" },
   { id: "dashboard", label: "Generando Dashboard", status: "pending" },
 ];
 
@@ -61,6 +63,12 @@ export default function PeopleAnalyticsPage() {
   }, [dataset, filters]);
 
   const activeResult = dashboard?.analytics ?? result;
+
+  const intelligence = useMemo(() => {
+    if (!dashboard?.filteredDataset) return null;
+
+    return runPeopleIntelligence(dashboard.filteredDataset);
+  }, [dashboard?.filteredDataset]);
 
   async function processFile(nextFile: File) {
     setProcessing(true);
@@ -115,8 +123,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "DATA GENERAL procesado",
-        description: "People Analytics fue generado con el formato real.",
+        title: "People Intelligence generado",
+        description: "DATA GENERAL fue analizado con motor inteligente.",
         variant: "success",
       });
     } catch (error) {
@@ -160,12 +168,12 @@ export default function PeopleAnalyticsPage() {
               People Analytics
             </p>
             <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-              Dashboard Ejecutivo de DATA GENERAL
+              People Intelligence de DATA GENERAL
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga el archivo DATA GENERAL real de Los Halcones. El sistema
-              detecta automáticamente la cabecera, normaliza columnas y genera
-              KPIs, filtros, rankings, insights y recomendaciones.
+              Carga DATA GENERAL para generar KPIs, filtros, rankings, alertas
+              estratégicas, score organizacional, insights consultivos y
+              recomendaciones ejecutivas.
             </p>
           </div>
 
@@ -222,8 +230,10 @@ export default function PeopleAnalyticsPage() {
         />
       )}
 
-      {activeResult && dashboard && (
+      {activeResult && dashboard && intelligence && (
         <>
+          <PeopleIntelligencePanel intelligence={intelligence} />
+
           <ManagementModeCard result={activeResult} dashboard={dashboard} />
 
           <AnalyticsExportActions
@@ -280,6 +290,7 @@ export default function PeopleAnalyticsPage() {
     </AnalyticsShell>
   );
 }
+
 function ExtraMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">

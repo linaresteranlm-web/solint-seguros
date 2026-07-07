@@ -19,6 +19,7 @@ import {
   isExitPeopleRow,
   normalizeDataGeneralRows,
 } from "@/lib/analytics/data-general-adapter";
+import { runPeopleIntelligence } from "@/lib/analytics/people-intelligence-engine";
 
 export const PEOPLE_REQUIRED_COLUMNS = DATA_GENERAL_REQUIRED_HEADERS;
 
@@ -36,12 +37,30 @@ export function runPeopleAnalytics(dataset: AnalyticsDataset): AnalyticsResult {
   const total = normalizedRows.length;
   const rotation = total > 0 ? Number(((exits / total) * 100).toFixed(2)) : 0;
 
+  const intelligence = runPeopleIntelligence(dataset);
+
   const sedes = new Set(normalizedRows.map((row) => row.Sede).filter(Boolean));
   const departamentos = new Set(
     normalizedRows.map((row) => row.Departamento).filter(Boolean)
   );
 
   const kpis: AnalyticsKpi[] = [
+    {
+      id: "health-score",
+      label: "Health Score",
+      value: intelligence.organizationalHealthScore,
+      unit: "/100",
+      severity:
+        intelligence.organizationalHealthScore >= 85
+          ? "success"
+          : intelligence.organizationalHealthScore >= 70
+            ? "info"
+            : intelligence.organizationalHealthScore >= 50
+              ? "warning"
+              : "danger",
+      trend: "flat",
+      interpretation: `La salud organizacional se clasifica como ${intelligence.healthLabel}.`,
+    },
     {
       id: "total",
       label: "Total registros",
@@ -79,6 +98,29 @@ export function runPeopleAnalytics(dataset: AnalyticsDataset): AnalyticsResult {
       interpretation: `La rotación estimada es ${rotation} % sobre DATA GENERAL.`,
     },
     {
+      id: "stability",
+      label: "Estabilidad",
+      value: intelligence.stabilityIndex,
+      unit: "%",
+      severity:
+        intelligence.stabilityIndex >= 85
+          ? "success"
+          : intelligence.stabilityIndex >= 70
+            ? "info"
+            : "warning",
+      trend: "flat",
+      interpretation: `El índice de estabilidad es ${intelligence.stabilityIndex} %.`,
+    },
+    {
+      id: "seniority",
+      label: "Antigüedad promedio",
+      value: intelligence.averageSeniorityYears,
+      unit: "años",
+      severity: "info",
+      trend: "flat",
+      interpretation: `La antigüedad promedio del personal activo es ${intelligence.averageSeniorityYears} años.`,
+    },
+    {
       id: "sedes",
       label: "Sedes",
       value: sedes.size,
@@ -97,7 +139,34 @@ export function runPeopleAnalytics(dataset: AnalyticsDataset): AnalyticsResult {
   ];
 
   const insights = buildInsightsFromKpis(kpis);
+  insights.unshift({
+    id: "consultant-summary",
+    title: "Resumen consultivo",
+    description: intelligence.consultantSummary,
+    severity:
+      intelligence.organizationalHealthScore >= 70
+        ? "info"
+        : intelligence.organizationalHealthScore >= 50
+          ? "warning"
+          : "danger",
+  });
+
   const recommendations = buildRecommendationsFromInsights(insights);
+
+  intelligence.strategicAlerts.forEach((alert) => {
+    recommendations.unshift({
+      id: `alert-rec-${alert.id}`,
+      title: alert.title,
+      description: alert.recommendation,
+      priority:
+        alert.priority === "Crítica" || alert.priority === "Alta"
+          ? "Alta"
+          : alert.priority === "Media"
+            ? "Media"
+            : "Baja",
+      impact: alert.impact,
+    });
+  });
 
   return {
     id: crypto.randomUUID(),
@@ -110,7 +179,7 @@ export function runPeopleAnalytics(dataset: AnalyticsDataset): AnalyticsResult {
     insights,
     recommendations,
     metadata: {
-      version: "1.1 DATA GENERAL REAL",
+      version: "1.2 PEOPLE INTELLIGENCE",
       company: "SOLINT SEGUROS",
       source: dataset.name,
     },
