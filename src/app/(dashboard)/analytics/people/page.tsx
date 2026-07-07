@@ -10,9 +10,17 @@ import {
   AnalyticsProgressStep,
 } from "@/components/analytics/analytics-progress";
 import { AnalyticsValidationReport } from "@/components/analytics/analytics-validation-report";
+import { PeopleFilterBar } from "@/components/analytics/people-filter-bar";
+import { PeopleRankingCard } from "@/components/analytics/people-ranking-card";
+import { ManagementModeCard } from "@/components/analytics/management-mode-card";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
-import { AnalyticsResult } from "@/lib/analytics/types";
+import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
+import {
+  buildPeopleDashboard,
+  EMPTY_PEOPLE_FILTERS,
+  PeopleFilters,
+} from "@/lib/analytics/people-dashboard-engine";
 import { showToast } from "@/lib/toast-store";
 
 const initialSteps: AnalyticsProgressStep[] = [
@@ -39,22 +47,32 @@ function updateStep(
 
 export default function PeopleAnalyticsPage() {
   const [file, setFile] = useState<File | null>(null);
+  const [dataset, setDataset] = useState<AnalyticsDataset | null>(null);
   const [processing, setProcessing] = useState(false);
   const [steps, setSteps] = useState(initialSteps);
   const [result, setResult] = useState<AnalyticsResult | null>(null);
+  const [filters, setFilters] = useState<PeopleFilters>(EMPTY_PEOPLE_FILTERS);
 
-  const hasResult = Boolean(result);
+  const dashboard = useMemo(() => {
+    if (!dataset) return null;
+
+    return buildPeopleDashboard(dataset, filters);
+  }, [dataset, filters]);
+
+  const activeResult = dashboard?.analytics ?? result;
 
   async function processFile(nextFile: File) {
     setProcessing(true);
     setResult(null);
+    setDataset(null);
+    setFilters(EMPTY_PEOPLE_FILTERS);
     setSteps(initialSteps);
 
     try {
       setSteps((current) => updateStep(current, "read", "running"));
       await wait(250);
 
-      const dataset = await readExcelAsAnalyticsDataset({
+      const nextDataset = await readExcelAsAnalyticsDataset({
         file: nextFile,
         domain: "people",
       });
@@ -69,7 +87,7 @@ export default function PeopleAnalyticsPage() {
       );
       await wait(250);
 
-      const analytics = runPeopleAnalytics(dataset);
+      const analytics = runPeopleAnalytics(nextDataset);
 
       setSteps((current) =>
         updateStep(updateStep(current, "validation", "done"), "kpis", "running")
@@ -91,13 +109,13 @@ export default function PeopleAnalyticsPage() {
       );
       await wait(250);
 
+      setDataset(nextDataset);
       setResult(analytics);
-
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
         title: "People Analytics generado",
-        description: "El motor analítico procesó el archivo DATA GENERAL.",
+        description: "Dashboard ejecutivo creado desde DATA GENERAL.",
         variant: "success",
       });
     } catch (error) {
@@ -132,8 +150,6 @@ export default function PeopleAnalyticsPage() {
     processFile(nextFile);
   }
 
-  const kpis = useMemo(() => result?.kpis ?? [], [result]);
-
   return (
     <AnalyticsShell active="/analytics/people">
       <section className="rounded-[1.7rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -143,11 +159,11 @@ export default function PeopleAnalyticsPage() {
               People Analytics
             </p>
             <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-              Carga DATA GENERAL
+              Dashboard Ejecutivo de Personas
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga el archivo Excel base para analizar headcount, ceses, rotación,
-              insights y recomendaciones automáticas.
+              Carga DATA GENERAL para generar un dashboard ejecutivo con filtros,
+              rankings, KPIs, insights y recomendaciones automáticas.
             </p>
           </div>
 
@@ -157,6 +173,8 @@ export default function PeopleAnalyticsPage() {
               onClick={() => {
                 setFile(null);
                 setResult(null);
+                setDataset(null);
+                setFilters(EMPTY_PEOPLE_FILTERS);
                 setSteps(initialSteps);
               }}
               className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
@@ -192,24 +210,69 @@ export default function PeopleAnalyticsPage() {
         </label>
       </section>
 
-      {(processing || hasResult) && <AnalyticsProgress steps={steps} />}
+      {(processing || activeResult) && <AnalyticsProgress steps={steps} />}
 
-      {result && (
+      {dataset && (
+        <PeopleFilterBar
+          dataset={dataset}
+          filters={filters}
+          onChange={setFilters}
+        />
+      )}
+
+      {activeResult && dashboard && (
         <>
-          <AnalyticsValidationReport validation={result.validation} />
+          <ManagementModeCard result={activeResult} dashboard={dashboard} />
+
+          <AnalyticsValidationReport validation={activeResult.validation} />
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {kpis.map((kpi) => (
+            {activeResult.kpis.map((kpi) => (
               <AnalyticsKpiCard key={kpi.id} kpi={kpi} />
             ))}
+            <ExtraMetric label="Registros filtrados" value={dashboard.totalRows} />
+            <ExtraMetric label="Sedes" value={dashboard.totalSedes} />
+            <ExtraMetric label="Cargos" value={dashboard.totalCargos} />
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-3">
+            <PeopleRankingCard
+              title="Distribución por Estado"
+              subtitle="Composición del universo filtrado"
+              items={dashboard.estadoDistribution}
+            />
+            <PeopleRankingCard
+              title="Ranking por Sede"
+              subtitle="Concentración de colaboradores por sede"
+              items={dashboard.sedeRanking}
+            />
+            <PeopleRankingCard
+              title="Ranking por Cargo"
+              subtitle="Concentración de colaboradores por cargo"
+              items={dashboard.cargoRanking}
+            />
           </div>
 
           <InsightsPanel
-            insights={result.insights}
-            recommendations={result.recommendations}
+            insights={activeResult.insights}
+            recommendations={activeResult.recommendations}
           />
         </>
       )}
     </AnalyticsShell>
+  );
+}
+
+function ExtraMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-3 text-4xl font-black text-[#04224a]">{value}</p>
+      <p className="mt-4 text-sm leading-6 text-slate-600">
+        Indicador calculado automáticamente según los filtros activos.
+      </p>
+    </div>
   );
 }
