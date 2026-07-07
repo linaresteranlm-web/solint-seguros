@@ -21,6 +21,7 @@ import { RiskRadarCard } from "@/components/analytics/risk-radar-card";
 import { OrganizationalTimeline } from "@/components/analytics/organizational-timeline";
 import { LocalTrendPanel } from "@/components/analytics/local-trend-panel";
 import { SnapshotHistoryPanel } from "@/components/analytics/snapshot-history-panel";
+import { CinematicSection, useCinematicSteps } from "@/components/analytics/cinematic-section";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
@@ -38,7 +39,7 @@ const initialSteps: AnalyticsProgressStep[] = [
   { id: "kpis", label: "Calculando KPIs", status: "pending" },
   { id: "insights", label: "Generando Insights consultivos", status: "pending" },
   { id: "recommendations", label: "Generando Matheito Live", status: "pending" },
-  { id: "dashboard", label: "Generando WOW Experience", status: "pending" },
+  { id: "dashboard", label: "Activando Dashboard Cinemático", status: "pending" },
 ];
 
 function wait(ms: number) {
@@ -58,6 +59,7 @@ export default function PeopleAnalyticsPage() {
   const [filters, setFilters] = useState<PeopleFilters>(EMPTY_PEOPLE_FILTERS);
   const [snapshotRefresh, setSnapshotRefresh] = useState(0);
   const [presentation, setPresentation] = useState(false);
+  const [cinematicRun, setCinematicRun] = useState(false);
 
   useEffect(() => {
     setPresentation(getPresentationMode());
@@ -86,8 +88,11 @@ export default function PeopleAnalyticsPage() {
     return buildOrganizationalTimeline({ result: activeResult, dashboard, intelligence, trends: localTrends });
   }, [activeResult, dashboard, intelligence, localTrends]);
 
+  const visibleSteps = useCinematicSteps(Boolean(activeResult && cinematicRun), 8, presentation ? 320 : 170);
+
   async function processFile(nextFile: File) {
     setProcessing(true);
+    setCinematicRun(false);
     setResult(null);
     setDataset(null);
     setFilters(EMPTY_PEOPLE_FILTERS);
@@ -114,8 +119,9 @@ export default function PeopleAnalyticsPage() {
       setDataset(nextDataset);
       setResult(analytics);
       setSteps((current) => updateStep(current, "dashboard", "done"));
+      setCinematicRun(true);
 
-      showToast({ title: "WOW Experience activado", description: "El análisis fue generado con experiencia premium.", variant: "success" });
+      showToast({ title: "Dashboard Cinemático activado", description: "Los paneles se mostrarán en secuencia ejecutiva.", variant: "success" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo procesar el archivo.";
       showToast({ title: "Error de procesamiento", description: message, variant: "error" });
@@ -142,13 +148,13 @@ export default function PeopleAnalyticsPage() {
           <div className="grid gap-6 xl:grid-cols-[1fr_auto] xl:items-center">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-[#005eb8]">People Analytics</p>
-              <h2 className="mt-2 text-3xl font-black text-[#04224a]">WOW Experience</h2>
+              <h2 className="mt-2 text-3xl font-black text-[#04224a]">Dashboard Cinemático</h2>
               <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-                Carga DATA GENERAL para iniciar una experiencia ejecutiva completa con Matheito, Command Center, Ribbon, Radar y Snapshot Manager.
+                Carga DATA GENERAL para mostrar el análisis como una presentación ejecutiva secuencial.
               </p>
             </div>
             {file && (
-              <button type="button" onClick={() => { setFile(null); setResult(null); setDataset(null); setFilters(EMPTY_PEOPLE_FILTERS); setSteps(initialSteps); }} className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100">
+              <button type="button" onClick={() => { setFile(null); setResult(null); setDataset(null); setFilters(EMPTY_PEOPLE_FILTERS); setSteps(initialSteps); setCinematicRun(false); }} className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100">
                 <X className="h-4 w-4" />
                 Quitar archivo
               </button>
@@ -181,43 +187,65 @@ export default function PeopleAnalyticsPage() {
 
       {activeResult && dashboard && intelligence && localTrends && (
         <>
-          <ExecutiveRibbon result={activeResult} dashboard={dashboard} intelligence={intelligence} />
+          <CinematicSection show={visibleSteps >= 1}>
+            <ExecutiveRibbon result={activeResult} dashboard={dashboard} intelligence={intelligence} />
+          </CinematicSection>
 
-          {!presentation && <MatheitoLivePanel result={activeResult} dashboard={dashboard} intelligence={intelligence} />}
+          {!presentation && (
+            <CinematicSection show={visibleSteps >= 2}>
+              <MatheitoLivePanel result={activeResult} dashboard={dashboard} intelligence={intelligence} />
+            </CinematicSection>
+          )}
 
-          <ExecutiveCommandCenter result={activeResult} dashboard={dashboard} intelligence={intelligence} />
+          <CinematicSection show={visibleSteps >= 3}>
+            <ExecutiveCommandCenter result={activeResult} dashboard={dashboard} intelligence={intelligence} />
+          </CinematicSection>
 
           {!presentation && (
             <>
-              <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                <RiskRadarCard result={activeResult} intelligence={intelligence} />
-                <OrganizationalTimeline events={timeline} />
-              </div>
+              <CinematicSection show={visibleSteps >= 4}>
+                <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                  <RiskRadarCard result={activeResult} intelligence={intelligence} />
+                  <OrganizationalTimeline events={timeline} />
+                </div>
+              </CinematicSection>
 
-              <LocalTrendPanel trends={localTrends} onSnapshotSaved={() => setSnapshotRefresh((value) => value + 1)} />
+              <CinematicSection show={visibleSteps >= 5}>
+                <LocalTrendPanel trends={localTrends} onSnapshotSaved={() => setSnapshotRefresh((value) => value + 1)} />
+              </CinematicSection>
 
-              <SnapshotHistoryPanel refreshKey={snapshotRefresh} />
-              <PeopleIntelligencePanel intelligence={intelligence} />
-              <ManagementModeCard result={activeResult} dashboard={dashboard} />
-              <AnalyticsExportActions result={activeResult} dashboard={dashboard} filters={filters} />
-              <AnalyticsValidationReport validation={activeResult.validation} />
+              <CinematicSection show={visibleSteps >= 6}>
+                <SnapshotHistoryPanel refreshKey={snapshotRefresh} />
+              </CinematicSection>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {activeResult.kpis.map((kpi) => <AnalyticsKpiCard key={kpi.id} kpi={kpi} />)}
-                <ExtraMetric label="Registros filtrados" value={dashboard.totalRows} />
-                <ExtraMetric label="Áreas" value={dashboard.totalAreas} />
-                <ExtraMetric label="Departamentos" value={dashboard.totalDepartamentos} />
-              </div>
+              <CinematicSection show={visibleSteps >= 7}>
+                <PeopleIntelligencePanel intelligence={intelligence} />
+              </CinematicSection>
 
-              <div className="grid gap-6 xl:grid-cols-3">
-                <PeopleRankingCard title="Distribución por Estado" subtitle="ACTIVO, BAJA u otros estados" items={dashboard.estadoDistribution} />
-                <PeopleRankingCard title="Ranking por Sede" subtitle="Concentración por establecimiento" items={dashboard.sedeRanking} />
-                <PeopleRankingCard title="Ranking por Cargo" subtitle="Concentración por cargo" items={dashboard.cargoRanking} />
-                <PeopleRankingCard title="Ranking por Área" subtitle="Concentración por área" items={dashboard.areaRanking} />
-                <PeopleRankingCard title="Ranking por Departamento" subtitle="Distribución geográfica" items={dashboard.departamentoRanking} />
-              </div>
+              <CinematicSection show={visibleSteps >= 8}>
+                <>
+                  <ManagementModeCard result={activeResult} dashboard={dashboard} />
+                  <AnalyticsExportActions result={activeResult} dashboard={dashboard} filters={filters} />
+                  <AnalyticsValidationReport validation={activeResult.validation} />
 
-              <InsightsPanel insights={activeResult.insights} recommendations={activeResult.recommendations} />
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {activeResult.kpis.map((kpi) => <AnalyticsKpiCard key={kpi.id} kpi={kpi} />)}
+                    <ExtraMetric label="Registros filtrados" value={dashboard.totalRows} />
+                    <ExtraMetric label="Áreas" value={dashboard.totalAreas} />
+                    <ExtraMetric label="Departamentos" value={dashboard.totalDepartamentos} />
+                  </div>
+
+                  <div className="grid gap-6 xl:grid-cols-3">
+                    <PeopleRankingCard title="Distribución por Estado" subtitle="ACTIVO, BAJA u otros estados" items={dashboard.estadoDistribution} />
+                    <PeopleRankingCard title="Ranking por Sede" subtitle="Concentración por establecimiento" items={dashboard.sedeRanking} />
+                    <PeopleRankingCard title="Ranking por Cargo" subtitle="Concentración por cargo" items={dashboard.cargoRanking} />
+                    <PeopleRankingCard title="Ranking por Área" subtitle="Concentración por área" items={dashboard.areaRanking} />
+                    <PeopleRankingCard title="Ranking por Departamento" subtitle="Distribución geográfica" items={dashboard.departamentoRanking} />
+                  </div>
+
+                  <InsightsPanel insights={activeResult.insights} recommendations={activeResult.recommendations} />
+                </>
+              </CinematicSection>
             </>
           )}
         </>
