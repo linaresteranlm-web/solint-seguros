@@ -16,10 +16,15 @@ import { ManagementModeCard } from "@/components/analytics/management-mode-card"
 import { AnalyticsExportActions } from "@/components/analytics/analytics-export-actions";
 import { PeopleIntelligencePanel } from "@/components/analytics/people-intelligence-panel";
 import { ExecutiveCommandCenter } from "@/components/analytics/executive-command-center";
+import { RiskRadarCard } from "@/components/analytics/risk-radar-card";
+import { OrganizationalTimeline } from "@/components/analytics/organizational-timeline";
+import { LocalTrendPanel } from "@/components/analytics/local-trend-panel";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
 import { runPeopleIntelligence } from "@/lib/analytics/people-intelligence-engine";
+import { buildLocalTrends } from "@/lib/analytics/local-trend-engine";
+import { buildOrganizationalTimeline } from "@/lib/analytics/organizational-timeline-engine";
 import {
   buildPeopleDashboard,
   EMPTY_PEOPLE_FILTERS,
@@ -70,6 +75,27 @@ export default function PeopleAnalyticsPage() {
 
     return runPeopleIntelligence(dashboard.filteredDataset);
   }, [dashboard?.filteredDataset]);
+
+  const localTrends = useMemo(() => {
+    if (!activeResult || !dashboard || !intelligence) return null;
+
+    return buildLocalTrends({
+      result: activeResult,
+      dashboard,
+      intelligence,
+    });
+  }, [activeResult, dashboard, intelligence]);
+
+  const timeline = useMemo(() => {
+    if (!activeResult || !dashboard || !intelligence || !localTrends) return [];
+
+    return buildOrganizationalTimeline({
+      result: activeResult,
+      dashboard,
+      intelligence,
+      trends: localTrends,
+    });
+  }, [activeResult, dashboard, intelligence, localTrends]);
 
   async function processFile(nextFile: File) {
     setProcessing(true);
@@ -124,8 +150,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "Executive Command Center generado",
-        description: "DATA GENERAL fue analizado en modo ejecutivo.",
+        title: "Timeline y Radar generados",
+        description: "DATA GENERAL fue analizado con tendencias locales.",
         variant: "success",
       });
     } catch (error) {
@@ -172,9 +198,8 @@ export default function PeopleAnalyticsPage() {
               Executive Command Center
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga DATA GENERAL para generar un centro de control ejecutivo con
-              People Intelligence, Health Score, Executive Score, alertas
-              estratégicas, KPIs, rankings y recomendaciones.
+              Carga DATA GENERAL para generar Command Center, Radar de Riesgo,
+              Timeline Organizacional y tendencias contra la carga anterior.
             </p>
           </div>
 
@@ -231,13 +256,20 @@ export default function PeopleAnalyticsPage() {
         />
       )}
 
-      {activeResult && dashboard && intelligence && (
+      {activeResult && dashboard && intelligence && localTrends && (
         <>
           <ExecutiveCommandCenter
             result={activeResult}
             dashboard={dashboard}
             intelligence={intelligence}
           />
+
+          <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+            <RiskRadarCard result={activeResult} intelligence={intelligence} />
+            <OrganizationalTimeline events={timeline} />
+          </div>
+
+          <LocalTrendPanel trends={localTrends} />
 
           <PeopleIntelligencePanel intelligence={intelligence} />
 
