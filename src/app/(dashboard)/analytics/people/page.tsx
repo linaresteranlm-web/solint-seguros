@@ -17,6 +17,7 @@ import { ManagementModeCard } from "@/components/analytics/management-mode-card"
 import { AnalyticsExportActions } from "@/components/analytics/analytics-export-actions";
 import { PeopleIntelligencePanel } from "@/components/analytics/people-intelligence-panel";
 import { ExecutiveCommandCenter } from "@/components/analytics/executive-command-center";
+import { ExecutiveRibbon } from "@/components/analytics/executive-ribbon";
 import { RiskRadarCard } from "@/components/analytics/risk-radar-card";
 import { OrganizationalTimeline } from "@/components/analytics/organizational-timeline";
 import { LocalTrendPanel } from "@/components/analytics/local-trend-panel";
@@ -45,7 +46,7 @@ const initialSteps: AnalyticsProgressStep[] = [
   { id: "kpis", label: "Calculando KPIs", status: "pending" },
   { id: "insights", label: "Generando Insights consultivos", status: "pending" },
   { id: "recommendations", label: "Generando People Intelligence", status: "pending" },
-  { id: "dashboard", label: "Generando Command Center", status: "pending" },
+  { id: "dashboard", label: "Generando Executive Ribbon", status: "pending" },
 ];
 
 function wait(ms: number) {
@@ -166,8 +167,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "Motion Dashboard generado",
-        description: "El dashboard fue renderizado con animaciones ejecutivas.",
+        title: "Executive Ribbon generado",
+        description: "El panel superior ejecutivo ya está disponible.",
         variant: "success",
       });
     } catch (error) {
@@ -212,11 +213,11 @@ export default function PeopleAnalyticsPage() {
                 People Analytics
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-                Motion Executive Dashboard
+                Executive Ribbon
               </h2>
               <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-                Carga DATA GENERAL para generar un Command Center con animaciones,
-                radar, timeline y tendencias ejecutivas.
+                Carga DATA GENERAL para generar el panel ejecutivo superior con
+                Health Score, Executive Score, Headcount, Rotación y estado operacional.
               </p>
             </div>
 
@@ -285,6 +286,12 @@ export default function PeopleAnalyticsPage() {
 
       {activeResult && dashboard && intelligence && localTrends && (
         <>
+          <ExecutiveRibbon
+            result={activeResult}
+            dashboard={dashboard}
+            intelligence={intelligence}
+          />
+
           <ExecutiveCommandCenter
             result={activeResult}
             dashboard={dashboard}
