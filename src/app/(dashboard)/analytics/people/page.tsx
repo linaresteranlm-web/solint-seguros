@@ -18,6 +18,7 @@ import { AnalyticsExportActions } from "@/components/analytics/analytics-export-
 import { PeopleIntelligencePanel } from "@/components/analytics/people-intelligence-panel";
 import { ExecutiveCommandCenter } from "@/components/analytics/executive-command-center";
 import { ExecutiveRibbon } from "@/components/analytics/executive-ribbon";
+import { MatheitoLivePanel } from "@/components/analytics/matheito-live-panel";
 import { RiskRadarCard } from "@/components/analytics/risk-radar-card";
 import { OrganizationalTimeline } from "@/components/analytics/organizational-timeline";
 import { LocalTrendPanel } from "@/components/analytics/local-trend-panel";
@@ -45,7 +46,7 @@ const initialSteps: AnalyticsProgressStep[] = [
   { id: "validation", label: "Validando DATA GENERAL", status: "pending" },
   { id: "kpis", label: "Calculando KPIs", status: "pending" },
   { id: "insights", label: "Generando Insights consultivos", status: "pending" },
-  { id: "recommendations", label: "Generando People Intelligence", status: "pending" },
+  { id: "recommendations", label: "Generando Matheito Live", status: "pending" },
   { id: "dashboard", label: "Generando Executive Ribbon", status: "pending" },
 ];
 
@@ -167,8 +168,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "Executive Ribbon generado",
-        description: "El panel superior ejecutivo ya está disponible.",
+        title: "Matheito Live activado",
+        description: "El copiloto ejecutivo generó su primera lectura automática.",
         variant: "success",
       });
     } catch (error) {
@@ -213,11 +214,11 @@ export default function PeopleAnalyticsPage() {
                 People Analytics
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-                Executive Ribbon
+                Matheito Live AI
               </h2>
               <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-                Carga DATA GENERAL para generar el panel ejecutivo superior con
-                Health Score, Executive Score, Headcount, Rotación y estado operacional.
+                Carga DATA GENERAL para generar el análisis ejecutivo y activar
+                el copiloto Matheito con lectura automática para gerencia.
               </p>
             </div>
 
@@ -291,6 +292,14 @@ export default function PeopleAnalyticsPage() {
             dashboard={dashboard}
             intelligence={intelligence}
           />
+
+          {!presentation && (
+            <MatheitoLivePanel
+              result={activeResult}
+              dashboard={dashboard}
+              intelligence={intelligence}
+            />
+          )}
 
           <ExecutiveCommandCenter
             result={activeResult}
