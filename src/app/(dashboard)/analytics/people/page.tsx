@@ -15,6 +15,7 @@ import { PeopleRankingCard } from "@/components/analytics/people-ranking-card";
 import { ManagementModeCard } from "@/components/analytics/management-mode-card";
 import { AnalyticsExportActions } from "@/components/analytics/analytics-export-actions";
 import { PeopleIntelligencePanel } from "@/components/analytics/people-intelligence-panel";
+import { ExecutiveCommandCenter } from "@/components/analytics/executive-command-center";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
@@ -33,7 +34,7 @@ const initialSteps: AnalyticsProgressStep[] = [
   { id: "kpis", label: "Calculando KPIs", status: "pending" },
   { id: "insights", label: "Generando Insights consultivos", status: "pending" },
   { id: "recommendations", label: "Generando People Intelligence", status: "pending" },
-  { id: "dashboard", label: "Generando Dashboard", status: "pending" },
+  { id: "dashboard", label: "Generando Command Center", status: "pending" },
 ];
 
 function wait(ms: number) {
@@ -123,8 +124,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "People Intelligence generado",
-        description: "DATA GENERAL fue analizado con motor inteligente.",
+        title: "Executive Command Center generado",
+        description: "DATA GENERAL fue analizado en modo ejecutivo.",
         variant: "success",
       });
     } catch (error) {
@@ -168,12 +169,12 @@ export default function PeopleAnalyticsPage() {
               People Analytics
             </p>
             <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-              People Intelligence de DATA GENERAL
+              Executive Command Center
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga DATA GENERAL para generar KPIs, filtros, rankings, alertas
-              estratégicas, score organizacional, insights consultivos y
-              recomendaciones ejecutivas.
+              Carga DATA GENERAL para generar un centro de control ejecutivo con
+              People Intelligence, Health Score, Executive Score, alertas
+              estratégicas, KPIs, rankings y recomendaciones.
             </p>
           </div>
 
@@ -232,6 +233,12 @@ export default function PeopleAnalyticsPage() {
 
       {activeResult && dashboard && intelligence && (
         <>
+          <ExecutiveCommandCenter
+            result={activeResult}
+            dashboard={dashboard}
+            intelligence={intelligence}
+          />
+
           <PeopleIntelligencePanel intelligence={intelligence} />
 
           <ManagementModeCard result={activeResult} dashboard={dashboard} />
