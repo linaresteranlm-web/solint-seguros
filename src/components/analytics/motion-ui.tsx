@@ -28,6 +28,7 @@ export function AnimatedCounter({
   useEffect(() => {
     if (numericValue === null) return;
 
+    const targetValue = numericValue;
     let frame = 0;
     let startTime: number | null = null;
     let animationFrame = 0;
@@ -38,7 +39,7 @@ export function AnimatedCounter({
       const progress = Math.min((timestamp - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
 
-      frame = numericValue * eased;
+      frame = targetValue * eased;
       setDisplay(frame);
 
       if (progress < 1) {

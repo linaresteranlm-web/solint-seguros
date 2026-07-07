@@ -32,6 +32,7 @@ import { buildOrganizationalTimeline } from "@/lib/analytics/organizational-time
 import { getPresentationMode, subscribePresentationMode } from "@/lib/analytics/presentation-mode-store";
 import { buildPeopleDashboard, EMPTY_PEOPLE_FILTERS, PeopleFilters } from "@/lib/analytics/people-dashboard-engine";
 import { showToast } from "@/lib/toast-store";
+import { buildMatheitoCopilotContext, saveMatheitoCopilotContext } from "@/lib/analytics/matheito-copilot-engine";
 
 const initialSteps: AnalyticsProgressStep[] = [
   { id: "read", label: "Leyendo archivo", status: "pending" },
@@ -90,6 +91,18 @@ export default function PeopleAnalyticsPage() {
   }, [activeResult, dashboard, intelligence, localTrends]);
 
   const visibleSteps = useCinematicSteps(Boolean(activeResult && cinematicRun), 8, presentation ? 320 : 170);
+
+  useEffect(() => {
+    if (!activeResult || !dashboard || !intelligence) return;
+
+    saveMatheitoCopilotContext(
+      buildMatheitoCopilotContext({
+        result: activeResult,
+        dashboard,
+        intelligence,
+      })
+    );
+  }, [activeResult, dashboard, intelligence]);
 
   async function processDataset(nextDataset: AnalyticsDataset, sourceFile?: File) {
     setProcessing(true);
