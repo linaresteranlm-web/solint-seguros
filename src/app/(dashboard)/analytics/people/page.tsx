@@ -23,6 +23,7 @@ import { LocalTrendPanel } from "@/components/analytics/local-trend-panel";
 import { SnapshotHistoryPanel } from "@/components/analytics/snapshot-history-panel";
 import { CinematicSection, useCinematicSteps } from "@/components/analytics/cinematic-section";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
+import { buildDemoPeopleDataset } from "@/lib/analytics/demo-people-dataset";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
 import { runPeopleIntelligence } from "@/lib/analytics/people-intelligence-engine";
@@ -90,7 +91,7 @@ export default function PeopleAnalyticsPage() {
 
   const visibleSteps = useCinematicSteps(Boolean(activeResult && cinematicRun), 8, presentation ? 320 : 170);
 
-  async function processFile(nextFile: File) {
+  async function processDataset(nextDataset: AnalyticsDataset, sourceFile?: File) {
     setProcessing(true);
     setCinematicRun(false);
     setResult(null);
@@ -101,12 +102,16 @@ export default function PeopleAnalyticsPage() {
     try {
       setSteps((current) => updateStep(current, "read", "running"));
       await wait(250);
-      const nextDataset = await readExcelAsAnalyticsDataset({ file: nextFile, domain: "people" });
+
+      const resolvedDataset = sourceFile
+        ? await readExcelAsAnalyticsDataset({ file: sourceFile, domain: "people" })
+        : nextDataset;
+
       setSteps((current) => updateStep(updateStep(current, "read", "done"), "structure", "running"));
       await wait(300);
       setSteps((current) => updateStep(updateStep(current, "structure", "done"), "validation", "running"));
       await wait(300);
-      const analytics = runPeopleAnalytics(nextDataset);
+      const analytics = runPeopleAnalytics(resolvedDataset);
       setSteps((current) => updateStep(updateStep(current, "validation", "done"), "kpis", "running"));
       await wait(300);
       setSteps((current) => updateStep(updateStep(current, "kpis", "done"), "insights", "running"));
@@ -116,12 +121,16 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(updateStep(current, "recommendations", "done"), "dashboard", "running"));
       await wait(420);
 
-      setDataset(nextDataset);
+      setDataset(resolvedDataset);
       setResult(analytics);
       setSteps((current) => updateStep(current, "dashboard", "done"));
       setCinematicRun(true);
 
-      showToast({ title: "Dashboard Cinemático activado", description: "Los paneles se mostrarán en secuencia ejecutiva.", variant: "success" });
+      showToast({
+        title: sourceFile ? "Dashboard Cinemático activado" : "Demo Mode activado",
+        description: sourceFile ? "Los paneles se mostrarán en secuencia ejecutiva." : "Se generó un DATA GENERAL ficticio para demostración.",
+        variant: "success",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo procesar el archivo.";
       showToast({ title: "Error de procesamiento", description: message, variant: "error" });
@@ -138,7 +147,12 @@ export default function PeopleAnalyticsPage() {
       return;
     }
     setFile(nextFile);
-    processFile(nextFile);
+    processDataset({} as AnalyticsDataset, nextFile);
+  }
+
+  function handleDemoMode() {
+    setFile(null);
+    processDataset(buildDemoPeopleDataset());
   }
 
   return (
@@ -148,12 +162,12 @@ export default function PeopleAnalyticsPage() {
           <div className="grid gap-6 xl:grid-cols-[1fr_auto] xl:items-center">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-[#005eb8]">People Analytics</p>
-              <h2 className="mt-2 text-3xl font-black text-[#04224a]">Dashboard Cinemático</h2>
+              <h2 className="mt-2 text-3xl font-black text-[#04224a]">Demo Mode</h2>
               <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-                Carga DATA GENERAL para mostrar el análisis como una presentación ejecutiva secuencial.
+                Carga DATA GENERAL o activa Demo Mode para mostrar el análisis completo sin archivo real.
               </p>
             </div>
-            {file && (
+            {(file || dataset) && (
               <button type="button" onClick={() => { setFile(null); setResult(null); setDataset(null); setFilters(EMPTY_PEOPLE_FILTERS); setSteps(initialSteps); setCinematicRun(false); }} className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100">
                 <X className="h-4 w-4" />
                 Quitar archivo
@@ -166,13 +180,13 @@ export default function PeopleAnalyticsPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-100 text-[#005eb8]">
               {file ? <FileSpreadsheet className="h-9 w-9" /> : <UploadCloud className="h-9 w-9" />}
             </div>
-            <p className="mt-5 text-lg font-black text-[#04224a]">{file?.name ?? "Seleccionar DATA GENERAL"}</p>
+            <p className="mt-5 text-lg font-black text-[#04224a]">{file?.name ?? dataset?.name ?? "Seleccionar DATA GENERAL"}</p>
             <p className="mt-2 text-sm text-slate-500">Formatos permitidos: .xlsx y .xls</p>
           </label>
         </section>
       )}
 
-      {!presentation && !file && !processing && !activeResult && <PeopleEmptyState />}
+      {!presentation && !file && !processing && !activeResult && <PeopleEmptyState onDemo={handleDemoMode} />}
 
       {!presentation && processing && (
         <>

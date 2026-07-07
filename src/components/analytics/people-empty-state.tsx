@@ -58,9 +58,13 @@ export function PeopleEmptyState({ onDemo }: { onDemo?: () => void }) {
               </div>
             </div>
 
-            <button type="button" onClick={onDemo} className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-400" title="Preparado para Fase 39.3 Demo Mode">
+            <button
+              type="button"
+              onClick={onDemo}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#ff7415] px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-[#04224a]"
+            >
               <PlayCircle className="h-5 w-5" />
-              Demo Mode próximamente
+              Activar Demo Mode
             </button>
           </div>
         </div>
