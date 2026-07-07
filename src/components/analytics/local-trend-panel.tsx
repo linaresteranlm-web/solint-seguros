@@ -5,6 +5,7 @@ import {
   LocalTrendResult,
   saveLastPeopleSnapshot,
 } from "@/lib/analytics/local-trend-engine";
+import { saveSnapshotToHistory } from "@/lib/analytics/snapshot-history-engine";
 import { showToast } from "@/lib/toast-store";
 
 function directionIcon(direction: string) {
@@ -20,13 +21,22 @@ function directionClass(direction: string) {
   return "bg-emerald-100 text-emerald-700";
 }
 
-export function LocalTrendPanel({ trends }: { trends: LocalTrendResult }) {
+export function LocalTrendPanel({
+  trends,
+  onSnapshotSaved,
+}: {
+  trends: LocalTrendResult;
+  onSnapshotSaved?: () => void;
+}) {
   function handleSaveSnapshot() {
     saveLastPeopleSnapshot(trends.currentSnapshot);
+    saveSnapshotToHistory(trends.currentSnapshot);
+    onSnapshotSaved?.();
 
     showToast({
       title: "Snapshot guardado",
-      description: "Este análisis será usado como referencia para la próxima carga.",
+      description:
+        "El análisis fue guardado en el historial local y será usado como referencia.",
       variant: "success",
     });
   }

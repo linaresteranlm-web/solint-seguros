@@ -19,6 +19,7 @@ import { ExecutiveCommandCenter } from "@/components/analytics/executive-command
 import { RiskRadarCard } from "@/components/analytics/risk-radar-card";
 import { OrganizationalTimeline } from "@/components/analytics/organizational-timeline";
 import { LocalTrendPanel } from "@/components/analytics/local-trend-panel";
+import { SnapshotHistoryPanel } from "@/components/analytics/snapshot-history-panel";
 import { readExcelAsAnalyticsDataset } from "@/lib/analytics/excel-dataset-reader";
 import { AnalyticsDataset, AnalyticsResult } from "@/lib/analytics/types";
 import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
@@ -61,6 +62,7 @@ export default function PeopleAnalyticsPage() {
   const [steps, setSteps] = useState(initialSteps);
   const [result, setResult] = useState<AnalyticsResult | null>(null);
   const [filters, setFilters] = useState<PeopleFilters>(EMPTY_PEOPLE_FILTERS);
+  const [snapshotRefresh, setSnapshotRefresh] = useState(0);
 
   const dashboard = useMemo(() => {
     if (!dataset) return null;
@@ -150,8 +152,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "Timeline y Radar generados",
-        description: "DATA GENERAL fue analizado con tendencias locales.",
+        title: "Historical Snapshot Manager listo",
+        description: "El análisis puede guardarse como corte histórico.",
         variant: "success",
       });
     } catch (error) {
@@ -195,11 +197,11 @@ export default function PeopleAnalyticsPage() {
               People Analytics
             </p>
             <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-              Executive Command Center
+              Historical Snapshot Manager
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga DATA GENERAL para generar Command Center, Radar de Riesgo,
-              Timeline Organizacional y tendencias contra la carga anterior.
+              Carga DATA GENERAL para generar el Command Center, guardar cortes
+              históricos y comparar la evolución de indicadores sin base de datos.
             </p>
           </div>
 
@@ -269,7 +271,12 @@ export default function PeopleAnalyticsPage() {
             <OrganizationalTimeline events={timeline} />
           </div>
 
-          <LocalTrendPanel trends={localTrends} />
+          <LocalTrendPanel
+            trends={localTrends}
+            onSnapshotSaved={() => setSnapshotRefresh((value) => value + 1)}
+          />
+
+          <SnapshotHistoryPanel refreshKey={snapshotRefresh} />
 
           <PeopleIntelligencePanel intelligence={intelligence} />
 
