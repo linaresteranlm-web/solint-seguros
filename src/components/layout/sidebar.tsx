@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   BarChart3,
   BrainCircuit,
@@ -16,6 +17,10 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import {
+  getPresentationMode,
+  subscribePresentationMode,
+} from "@/lib/analytics/presentation-mode-store";
 
 const menuPrincipal = [
   { label: "Dashboard", href: "/dashboard", icon: BarChart3 },
@@ -49,6 +54,18 @@ export function Sidebar({
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
 }) {
+  const [presentation, setPresentation] = useState(false);
+
+  useEffect(() => {
+    setPresentation(getPresentationMode());
+
+    return subscribePresentationMode((nextState) => {
+      setPresentation(nextState.enabled);
+    });
+  }, []);
+
+  if (presentation) return null;
+
   return (
     <>
       <aside

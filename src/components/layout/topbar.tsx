@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
+import {
+  getPresentationMode,
+  subscribePresentationMode,
+} from "@/lib/analytics/presentation-mode-store";
 
 type SessionUser = {
   username: string;
@@ -41,6 +45,7 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [userOpen, setUserOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [presentation, setPresentation] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -49,6 +54,12 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
     if (raw) {
       setUser(JSON.parse(raw));
     }
+
+    setPresentation(getPresentationMode());
+
+    return subscribePresentationMode((nextState) => {
+      setPresentation(nextState.enabled);
+    });
   }, []);
 
   useEffect(() => {
@@ -69,6 +80,8 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
     localStorage.removeItem("solint_user");
     window.location.href = "/login";
   }
+
+  if (presentation) return null;
 
   return (
     <header className="sticky top-0 z-30 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-xl sm:min-h-20 sm:px-5 lg:px-6">

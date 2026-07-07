@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FileSpreadsheet, UploadCloud, X } from "lucide-react";
 import { AnalyticsShell } from "@/components/analytics/analytics-shell";
 import { AnalyticsKpiCard } from "@/components/analytics/analytics-kpi-card";
@@ -26,6 +26,10 @@ import { runPeopleAnalytics } from "@/lib/analytics/people-analytics-engine";
 import { runPeopleIntelligence } from "@/lib/analytics/people-intelligence-engine";
 import { buildLocalTrends } from "@/lib/analytics/local-trend-engine";
 import { buildOrganizationalTimeline } from "@/lib/analytics/organizational-timeline-engine";
+import {
+  getPresentationMode,
+  subscribePresentationMode,
+} from "@/lib/analytics/presentation-mode-store";
 import {
   buildPeopleDashboard,
   EMPTY_PEOPLE_FILTERS,
@@ -63,6 +67,15 @@ export default function PeopleAnalyticsPage() {
   const [result, setResult] = useState<AnalyticsResult | null>(null);
   const [filters, setFilters] = useState<PeopleFilters>(EMPTY_PEOPLE_FILTERS);
   const [snapshotRefresh, setSnapshotRefresh] = useState(0);
+  const [presentation, setPresentation] = useState(false);
+
+  useEffect(() => {
+    setPresentation(getPresentationMode());
+
+    return subscribePresentationMode((nextState) => {
+      setPresentation(nextState.enabled);
+    });
+  }, []);
 
   const dashboard = useMemo(() => {
     if (!dataset) return null;
@@ -152,8 +165,8 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "Historical Snapshot Manager listo",
-        description: "El análisis puede guardarse como corte histórico.",
+        title: "Presentation Mode disponible",
+        description: "El análisis ya puede visualizarse en modo presentación.",
         variant: "success",
       });
     } catch (error) {
@@ -190,67 +203,71 @@ export default function PeopleAnalyticsPage() {
 
   return (
     <AnalyticsShell active="/analytics/people">
-      <section className="rounded-[1.7rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-        <div className="grid gap-6 xl:grid-cols-[1fr_auto] xl:items-center">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#005eb8]">
-              People Analytics
-            </p>
-            <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-              Historical Snapshot Manager
-            </h2>
-            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-              Carga DATA GENERAL para generar el Command Center, guardar cortes
-              históricos y comparar la evolución de indicadores sin base de datos.
-            </p>
-          </div>
+      {!presentation && (
+        <section className="rounded-[1.7rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <div className="grid gap-6 xl:grid-cols-[1fr_auto] xl:items-center">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-[#005eb8]">
+                People Analytics
+              </p>
+              <h2 className="mt-2 text-3xl font-black text-[#04224a]">
+                Presentation Mode
+              </h2>
+              <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
+                Carga DATA GENERAL para generar un Command Center listo para
+                presentar en gerencia, proyector o pantalla ejecutiva.
+              </p>
+            </div>
 
-          {file && (
-            <button
-              type="button"
-              onClick={() => {
-                setFile(null);
-                setResult(null);
-                setDataset(null);
-                setFilters(EMPTY_PEOPLE_FILTERS);
-                setSteps(initialSteps);
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
-            >
-              <X className="h-4 w-4" />
-              Quitar archivo
-            </button>
-          )}
-        </div>
-
-        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center transition hover:border-[#005eb8] hover:bg-blue-50">
-          <input
-            type="file"
-            accept=".xls,.xlsx"
-            className="hidden"
-            onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
-          />
-
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-100 text-[#005eb8]">
-            {file ? (
-              <FileSpreadsheet className="h-9 w-9" />
-            ) : (
-              <UploadCloud className="h-9 w-9" />
+            {file && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setResult(null);
+                  setDataset(null);
+                  setFilters(EMPTY_PEOPLE_FILTERS);
+                  setSteps(initialSteps);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
+              >
+                <X className="h-4 w-4" />
+                Quitar archivo
+              </button>
             )}
           </div>
 
-          <p className="mt-5 text-lg font-black text-[#04224a]">
-            {file?.name ?? "Seleccionar DATA GENERAL"}
-          </p>
-          <p className="mt-2 text-sm text-slate-500">
-            Formatos permitidos: .xlsx y .xls
-          </p>
-        </label>
-      </section>
+          <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center transition hover:border-[#005eb8] hover:bg-blue-50">
+            <input
+              type="file"
+              accept=".xls,.xlsx"
+              className="hidden"
+              onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+            />
 
-      {(processing || activeResult) && <AnalyticsProgress steps={steps} />}
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-100 text-[#005eb8]">
+              {file ? (
+                <FileSpreadsheet className="h-9 w-9" />
+              ) : (
+                <UploadCloud className="h-9 w-9" />
+              )}
+            </div>
 
-      {dataset && (
+            <p className="mt-5 text-lg font-black text-[#04224a]">
+              {file?.name ?? "Seleccionar DATA GENERAL"}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              Formatos permitidos: .xlsx y .xls
+            </p>
+          </label>
+        </section>
+      )}
+
+      {!presentation && (processing || activeResult) && (
+        <AnalyticsProgress steps={steps} />
+      )}
+
+      {!presentation && dataset && (
         <PeopleFilterBar
           dataset={dataset}
           filters={filters}
@@ -266,71 +283,75 @@ export default function PeopleAnalyticsPage() {
             intelligence={intelligence}
           />
 
-          <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <RiskRadarCard result={activeResult} intelligence={intelligence} />
-            <OrganizationalTimeline events={timeline} />
-          </div>
+          {!presentation && (
+            <>
+              <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                <RiskRadarCard result={activeResult} intelligence={intelligence} />
+                <OrganizationalTimeline events={timeline} />
+              </div>
 
-          <LocalTrendPanel
-            trends={localTrends}
-            onSnapshotSaved={() => setSnapshotRefresh((value) => value + 1)}
-          />
+              <LocalTrendPanel
+                trends={localTrends}
+                onSnapshotSaved={() => setSnapshotRefresh((value) => value + 1)}
+              />
 
-          <SnapshotHistoryPanel refreshKey={snapshotRefresh} />
+              <SnapshotHistoryPanel refreshKey={snapshotRefresh} />
 
-          <PeopleIntelligencePanel intelligence={intelligence} />
+              <PeopleIntelligencePanel intelligence={intelligence} />
 
-          <ManagementModeCard result={activeResult} dashboard={dashboard} />
+              <ManagementModeCard result={activeResult} dashboard={dashboard} />
 
-          <AnalyticsExportActions
-            result={activeResult}
-            dashboard={dashboard}
-            filters={filters}
-          />
+              <AnalyticsExportActions
+                result={activeResult}
+                dashboard={dashboard}
+                filters={filters}
+              />
 
-          <AnalyticsValidationReport validation={activeResult.validation} />
+              <AnalyticsValidationReport validation={activeResult.validation} />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {activeResult.kpis.map((kpi) => (
-              <AnalyticsKpiCard key={kpi.id} kpi={kpi} />
-            ))}
-            <ExtraMetric label="Registros filtrados" value={dashboard.totalRows} />
-            <ExtraMetric label="Áreas" value={dashboard.totalAreas} />
-            <ExtraMetric label="Departamentos" value={dashboard.totalDepartamentos} />
-          </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {activeResult.kpis.map((kpi) => (
+                  <AnalyticsKpiCard key={kpi.id} kpi={kpi} />
+                ))}
+                <ExtraMetric label="Registros filtrados" value={dashboard.totalRows} />
+                <ExtraMetric label="Áreas" value={dashboard.totalAreas} />
+                <ExtraMetric label="Departamentos" value={dashboard.totalDepartamentos} />
+              </div>
 
-          <div className="grid gap-6 xl:grid-cols-3">
-            <PeopleRankingCard
-              title="Distribución por Estado"
-              subtitle="ACTIVO, BAJA u otros estados"
-              items={dashboard.estadoDistribution}
-            />
-            <PeopleRankingCard
-              title="Ranking por Sede"
-              subtitle="Concentración por establecimiento"
-              items={dashboard.sedeRanking}
-            />
-            <PeopleRankingCard
-              title="Ranking por Cargo"
-              subtitle="Concentración por cargo"
-              items={dashboard.cargoRanking}
-            />
-            <PeopleRankingCard
-              title="Ranking por Área"
-              subtitle="Concentración por área"
-              items={dashboard.areaRanking}
-            />
-            <PeopleRankingCard
-              title="Ranking por Departamento"
-              subtitle="Distribución geográfica"
-              items={dashboard.departamentoRanking}
-            />
-          </div>
+              <div className="grid gap-6 xl:grid-cols-3">
+                <PeopleRankingCard
+                  title="Distribución por Estado"
+                  subtitle="ACTIVO, BAJA u otros estados"
+                  items={dashboard.estadoDistribution}
+                />
+                <PeopleRankingCard
+                  title="Ranking por Sede"
+                  subtitle="Concentración por establecimiento"
+                  items={dashboard.sedeRanking}
+                />
+                <PeopleRankingCard
+                  title="Ranking por Cargo"
+                  subtitle="Concentración por cargo"
+                  items={dashboard.cargoRanking}
+                />
+                <PeopleRankingCard
+                  title="Ranking por Área"
+                  subtitle="Concentración por área"
+                  items={dashboard.areaRanking}
+                />
+                <PeopleRankingCard
+                  title="Ranking por Departamento"
+                  subtitle="Distribución geográfica"
+                  items={dashboard.departamentoRanking}
+                />
+              </div>
 
-          <InsightsPanel
-            insights={activeResult.insights}
-            recommendations={activeResult.recommendations}
-          />
+              <InsightsPanel
+                insights={activeResult.insights}
+                recommendations={activeResult.recommendations}
+              />
+            </>
+          )}
         </>
       )}
     </AnalyticsShell>
