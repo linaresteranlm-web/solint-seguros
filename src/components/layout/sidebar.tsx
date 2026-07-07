@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  BrainCircuit,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
@@ -22,6 +23,14 @@ const menuPrincipal = [
   { label: "Comparador y Tramas", href: "/comparador", icon: GitCompareArrows },
   { label: "Historial de Procesos", href: "/historial", icon: FileText },
   { label: "Reportes", href: "/reportes", icon: FileText },
+];
+
+const menuAnalytics = [
+  { label: "SOLINT Analytics", href: "/analytics", icon: BrainCircuit },
+  { label: "People Analytics", href: "/analytics/people", icon: UsersRound },
+  { label: "Analytics Comparador", href: "/analytics/comparador", icon: GitCompareArrows },
+  { label: "Analytics Exportaciones", href: "/analytics/exportaciones", icon: FileSpreadsheet },
+  { label: "Analytics Configuración", href: "/analytics/configuracion", icon: Settings },
 ];
 
 const menuConfig = [
@@ -132,8 +141,15 @@ function SidebarContent({
 
       <nav className="relative flex-1 space-y-7 overflow-y-auto px-4 pb-4">
         <MenuBlock
-          title="Menú principal"
+          title="SOLINT Seguros"
           items={menuPrincipal}
+          pathname={pathname}
+          collapsed={collapsed}
+          onNavigate={mobile ? onToggle : undefined}
+        />
+        <MenuBlock
+          title="SOLINT Analytics"
+          items={menuAnalytics}
           pathname={pathname}
           collapsed={collapsed}
           onNavigate={mobile ? onToggle : undefined}
@@ -152,10 +168,10 @@ function SidebarContent({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,122,26,0.18),transparent_45%)]" />
           <ShieldCheck className="relative h-8 w-8 text-[#ff7415]" />
           <p className="relative mt-5 text-sm font-black uppercase tracking-wide text-[#04224a]">
-            SOLINT Business Systems
+            SOLINT Analytics
           </p>
           <p className="relative mt-2 text-sm leading-6 text-slate-600">
-            ERP web construido para control, seguridad y trazabilidad.
+            Motor BI Enterprise integrado a SOLINT Seguros.
           </p>
         </div>
       )}
@@ -191,7 +207,9 @@ function MenuBlock({
       <div className="space-y-2">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href;
+          const active =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
 
           return (
             <Link
