@@ -9,6 +9,7 @@ import {
   AnalyticsProgress,
   AnalyticsProgressStep,
 } from "@/components/analytics/analytics-progress";
+import { DashboardSkeleton } from "@/components/analytics/dashboard-skeleton";
 import { AnalyticsValidationReport } from "@/components/analytics/analytics-validation-report";
 import { PeopleFilterBar } from "@/components/analytics/people-filter-bar";
 import { PeopleRankingCard } from "@/components/analytics/people-ranking-card";
@@ -131,42 +132,42 @@ export default function PeopleAnalyticsPage() {
       setSteps((current) =>
         updateStep(updateStep(current, "read", "done"), "structure", "running")
       );
-      await wait(250);
+      await wait(300);
 
       setSteps((current) =>
         updateStep(updateStep(current, "structure", "done"), "validation", "running")
       );
-      await wait(250);
+      await wait(300);
 
       const analytics = runPeopleAnalytics(nextDataset);
 
       setSteps((current) =>
         updateStep(updateStep(current, "validation", "done"), "kpis", "running")
       );
-      await wait(250);
+      await wait(300);
 
       setSteps((current) =>
         updateStep(updateStep(current, "kpis", "done"), "insights", "running")
       );
-      await wait(250);
+      await wait(300);
 
       setSteps((current) =>
         updateStep(updateStep(current, "insights", "done"), "recommendations", "running")
       );
-      await wait(250);
+      await wait(300);
 
       setSteps((current) =>
         updateStep(updateStep(current, "recommendations", "done"), "dashboard", "running")
       );
-      await wait(250);
+      await wait(420);
 
       setDataset(nextDataset);
       setResult(analytics);
       setSteps((current) => updateStep(current, "dashboard", "done"));
 
       showToast({
-        title: "Presentation Mode disponible",
-        description: "El análisis ya puede visualizarse en modo presentación.",
+        title: "Motion Dashboard generado",
+        description: "El dashboard fue renderizado con animaciones ejecutivas.",
         variant: "success",
       });
     } catch (error) {
@@ -211,11 +212,11 @@ export default function PeopleAnalyticsPage() {
                 People Analytics
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#04224a]">
-                Presentation Mode
+                Motion Executive Dashboard
               </h2>
               <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-                Carga DATA GENERAL para generar un Command Center listo para
-                presentar en gerencia, proyector o pantalla ejecutiva.
+                Carga DATA GENERAL para generar un Command Center con animaciones,
+                radar, timeline y tendencias ejecutivas.
               </p>
             </div>
 
@@ -263,7 +264,14 @@ export default function PeopleAnalyticsPage() {
         </section>
       )}
 
-      {!presentation && (processing || activeResult) && (
+      {!presentation && processing && (
+        <>
+          <AnalyticsProgress steps={steps} />
+          <DashboardSkeleton />
+        </>
+      )}
+
+      {!presentation && !processing && activeResult && (
         <AnalyticsProgress steps={steps} />
       )}
 
@@ -360,7 +368,7 @@ export default function PeopleAnalyticsPage() {
 
 function ExtraMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
         {label}
       </p>
