@@ -25,8 +25,8 @@ type SessionUser = {
 
 const notifications = [
   {
-    title: "SOLINT SEGUROS activo",
-    text: "El sistema está listo para gestionar SCTR y Vida Ley.",
+    title: "SOLINT Business Suite activo",
+    text: "La plataforma está lista para seguros, People Analytics y reportes ejecutivos.",
     type: "success",
   },
   {
@@ -95,10 +95,10 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
 
         <div className="min-w-0">
           <p className="truncate text-xs font-black uppercase tracking-wide text-[#005eb8] sm:text-sm">
-            SOLINT SEGUROS
+            SOLINT Business Suite
           </p>
           <p className="mt-0.5 hidden truncate text-xs font-medium text-slate-500 sm:block lg:text-sm">
-            Gestión Inteligente de SCTR y Vida Ley · Powered by SOLINT Business Systems
+            Gestión, analítica e inteligencia ejecutiva · Powered by SOLINT Business Systems
           </p>
         </div>
       </div>

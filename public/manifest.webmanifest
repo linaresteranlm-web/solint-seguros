@@ -1,7 +1,7 @@
 {
-  "name": "SOLINT SEGUROS",
-  "short_name": "SOLINT SEGUROS",
-  "description": "Sistema inteligente para la gestión de SCTR y Vida Ley desarrollado por SOLINT Business Systems.",
+  "name": "SOLINT Business Suite",
+  "short_name": "SOLINT Suite",
+  "description": "Plataforma empresarial de gestión, analítica e inteligencia ejecutiva desarrollada por SOLINT Business Systems.",
   "start_url": "/login",
   "scope": "/",
   "display": "standalone",

@@ -33,7 +33,7 @@ export function Footer() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <span>Gestión de SCTR y Vida Ley</span>
+          <span>Suite empresarial modular</span>
           <span className="h-1 w-1 rounded-full bg-slate-300" />
           <span>{APP_POWERED_BY}</span>
           <span className="h-1 w-1 rounded-full bg-slate-300" />

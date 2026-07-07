@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SOLINT SEGUROS",
+  title: "SOLINT Business Suite",
   description:
-    "Sistema inteligente para la gestión de SCTR y Vida Ley desarrollado por SOLINT Business Systems.",
-  applicationName: "SOLINT SEGUROS",
+    "Plataforma empresarial de gestión, analítica e inteligencia ejecutiva desarrollada por SOLINT Business Systems.",
+  applicationName: "SOLINT Business Suite",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -23,14 +23,14 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "SOLINT SEGUROS",
+    title: "SOLINT Business Suite",
     statusBarStyle: "default",
   },
   openGraph: {
-    title: "SOLINT SEGUROS",
+    title: "SOLINT Business Suite",
     description:
-      "Sistema inteligente para la gestión de SCTR y Vida Ley.",
-    siteName: "SOLINT SEGUROS",
+      "Plataforma empresarial de gestión, analítica e inteligencia ejecutiva.",
+    siteName: "SOLINT Business Suite",
     type: "website",
   },
 };

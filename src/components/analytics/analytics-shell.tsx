@@ -6,6 +6,7 @@ import {
   FileArchive,
   GitCompareArrows,
   HelpCircle,
+  RotateCcw,
   Settings,
   UsersRound,
 } from "lucide-react";
@@ -25,6 +26,11 @@ const items = [
     label: "People Analytics",
     href: "/analytics/people",
     icon: UsersRound,
+  },
+  {
+    label: "Indicadores de Rotación",
+    href: "/analytics/rotacion",
+    icon: RotateCcw,
   },
   {
     label: "Comparador",
