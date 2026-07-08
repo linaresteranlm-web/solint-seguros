@@ -2,7 +2,6 @@
 
 import {
   CheckCircle2,
-  Download,
   ExternalLink,
   FileJson,
   FileText,
@@ -32,11 +31,10 @@ export function AnalyticsExportActions({
 }) {
   function handleJson() {
     downloadAnalyticsJson({ result, dashboard, filters });
-
     addProcessHistory({
       type: "DESCARGA_ARCHIVO",
-      title: "SOLINT Business Suite JSON exportado",
-      description: "Se exportó el análisis People Analytics en formato JSON Enterprise.",
+      title: "CORPRISEG JSON exportado",
+      description: "Se exportó el análisis People Analytics en formato JSON.",
       status: "OK",
       metrics: {
         kpis: result.kpis.length,
@@ -44,7 +42,6 @@ export function AnalyticsExportActions({
         recomendaciones: result.recommendations.length,
       },
     });
-
     showToast({
       title: "JSON exportado",
       description: "El análisis completo fue descargado en formato JSON.",
@@ -54,74 +51,65 @@ export function AnalyticsExportActions({
 
   function handleOpenPdf() {
     openAnalyticsPdf({ result, dashboard, filters });
-
     addProcessHistory({
       type: "DESCARGA_ARCHIVO",
-      title: "PDF Ejecutivo v3 generado",
+      title: "Reporte CORPRISEG v4 generado",
       description:
-        "Se generó el PDF Ejecutivo multipágina de SOLINT Business Suite · People Analytics.",
+        "Se generó el PDF corporativo CORPRISEG con pie Elaborado por SOLINT Business Suite © LC2026.",
       status: "OK",
       metrics: {
         registros: dashboard.totalRows,
         kpis: result.kpis.length,
-        engine: "PDF_V3_MULTIPAGINA",
+        engine: "CORPRISEG_CORPORATE_V4",
       },
     });
-
     showToast({
-      title: "PDF Ejecutivo v3 generado",
+      title: "Reporte CORPRISEG generado",
       description:
-        "Debe abrirse en nueva pestaña con portada multipágina y marca SOLINT Business Suite.",
+        "Debe abrirse en nueva pestaña con logo/diseño CORPRISEG y pie SOLINT Business Suite © LC2026.",
       variant: "success",
     });
   }
 
   function handleDownloadPdf() {
     downloadAnalyticsPdf({ result, dashboard, filters });
-
     showToast({
-      title: "PDF v3 descargado",
-      description:
-        "El reporte ejecutivo multipágina fue descargado con el nuevo motor.",
+      title: "Reporte CORPRISEG descargado",
+      description: "El reporte ejecutivo fue descargado con branding CORPRISEG.",
       variant: "success",
     });
   }
 
   function handleValidationMessage() {
     showToast({
-      title: "Validación PDF v3",
+      title: "Validación reporte CORPRISEG",
       description:
-        "Si el PDF todavía dice SOLINT Analytics / SOLINT SEGUROS, limpia .next y reinicia npm run dev.",
+        "Coloca el logo en public/images/corpriseg-logo.png y limpia .next antes de validar.",
       variant: "warning",
     });
   }
 
   return (
     <section className="overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-      <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-br from-[#04224a] via-[#005eb8] to-[#061a3a] p-6 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,116,21,0.28),transparent_35%)]" />
-
+      <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-br from-[#173b76] via-[#1f4f99] to-[#0f172a] p-6 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,130,32,0.32),transparent_35%)]" />
         <div className="relative z-10 grid gap-5 xl:grid-cols-[1fr_auto] xl:items-center">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.25em] text-blue-100">
-              Export Center
+              Report Center CORPRISEG
             </p>
-            <h2 className="mt-2 text-2xl font-black">
-              PDF Engine v3 Multipágina
-            </h2>
+            <h2 className="mt-2 text-2xl font-black">Reporte Corporativo v4</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-blue-100">
-              Este panel usa el nuevo generador de reportes de SOLINT Business
-              Suite. El PDF debe salir en varias páginas, con portada ejecutiva,
-              KPIs, insights, rankings y validación.
+              Los reportes se generan con identidad CORPRISEG para presentación
+              a gerencia y/o jefaturas. SOLINT aparece únicamente como elaborador técnico.
             </p>
           </div>
-
           <div className="rounded-3xl border border-white/15 bg-white/10 px-5 py-4 text-center backdrop-blur">
-            <CheckCircle2 className="mx-auto h-8 w-8 text-[#ffb375]" />
+            <CheckCircle2 className="mx-auto h-8 w-8 text-[#f58220]" />
             <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-blue-100">
-              Activo
+              Branding
             </p>
-            <p className="mt-1 text-sm font-black">v3 Multipágina</p>
+            <p className="mt-1 text-sm font-black">CORPRISEG</p>
           </div>
         </div>
       </div>
@@ -130,38 +118,36 @@ export function AnalyticsExportActions({
         <button
           type="button"
           onClick={handleOpenPdf}
-          className="flex flex-col items-start gap-3 rounded-2xl bg-[#ff7415] p-5 text-left text-white shadow-lg transition hover:-translate-y-1 hover:bg-[#04224a] hover:shadow-xl"
+          className="flex flex-col items-start gap-3 rounded-2xl bg-[#f58220] p-5 text-left text-white shadow-lg transition hover:-translate-y-1 hover:bg-[#173b76] hover:shadow-xl"
         >
           <ExternalLink className="h-7 w-7" />
-          <span className="text-base font-black">Abrir PDF Ejecutivo v3</span>
+          <span className="text-base font-black">Abrir Reporte CORPRISEG</span>
           <span className="text-sm leading-6 text-orange-50">
-            Abre el reporte multipágina en nueva pestaña.
+            Abre el PDF gerencial en nueva pestaña.
           </span>
         </button>
 
         <button
           type="button"
           onClick={handleDownloadPdf}
-          className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:-translate-y-1 hover:border-[#005eb8] hover:bg-blue-50 hover:shadow-xl"
+          className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:-translate-y-1 hover:border-[#173b76] hover:bg-blue-50 hover:shadow-xl"
         >
-          <FileText className="h-7 w-7 text-[#005eb8]" />
-          <span className="text-base font-black text-[#04224a]">
-            Descargar PDF v3
+          <FileText className="h-7 w-7 text-[#173b76]" />
+          <span className="text-base font-black text-[#0f172a]">
+            Descargar PDF CORPRISEG
           </span>
           <span className="text-sm leading-6 text-slate-600">
-            Descarga el informe ejecutivo nuevo.
+            Descarga el informe para gerencia/jefaturas.
           </span>
         </button>
 
         <button
           type="button"
           onClick={handleJson}
-          className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:-translate-y-1 hover:border-[#005eb8] hover:bg-blue-50 hover:shadow-xl"
+          className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:-translate-y-1 hover:border-[#173b76] hover:bg-blue-50 hover:shadow-xl"
         >
-          <FileJson className="h-7 w-7 text-[#005eb8]" />
-          <span className="text-base font-black text-[#04224a]">
-            Descargar JSON
-          </span>
+          <FileJson className="h-7 w-7 text-[#173b76]" />
+          <span className="text-base font-black text-[#0f172a]">Descargar JSON</span>
           <span className="text-sm leading-6 text-slate-600">
             KPIs, insights, filtros, validación y rankings.
           </span>
@@ -174,10 +160,10 @@ export function AnalyticsExportActions({
         >
           <RefreshCcw className="h-7 w-7 text-amber-700" />
           <span className="text-base font-black text-amber-800">
-            Validar cambio
+            Validar branding
           </span>
           <span className="text-sm leading-6 text-amber-800">
-            Ayuda si aún ves el PDF antiguo.
+            Revisa logo, portada y pie de página.
           </span>
         </button>
       </div>
@@ -185,11 +171,10 @@ export function AnalyticsExportActions({
       <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
         <div className="flex flex-col gap-2 text-sm text-slate-600 lg:flex-row lg:items-center lg:justify-between">
           <span>
-            Validación esperada: portada azul, texto <b>SOLINT Business Suite</b>,
-            módulo <b>People Analytics</b> y varias páginas.
+            Esperado: portada CORPRISEG, colores azul/naranja, logo si existe y PDF multipágina.
           </span>
-          <span className="font-black text-[#005eb8]">
-            Ya no debe aparecer “SOLINT SEGUROS” en el PDF general.
+          <span className="font-black text-[#173b76]">
+            Pie: Elaborado por SOLINT Business Suite © LC2026
           </span>
         </div>
       </div>
