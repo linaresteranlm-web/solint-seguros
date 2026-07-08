@@ -30,11 +30,27 @@ export type AnalyticsExportPayload = {
   };
 };
 
-const BLUE = { r: 4, g: 34, b: 74 };
-const BLUE2 = { r: 0, g: 94, b: 184 };
-const ORANGE = { r: 255, g: 116, b: 21 };
-const SLATE = { r: 80, g: 92, b: 110 };
-const LIGHT = { r: 244, g: 247, b: 251 };
+const BRAND = {
+  blue: [4, 34, 74] as const,
+  blue2: [0, 94, 184] as const,
+  orange: [255, 116, 21] as const,
+  slate: [80, 92, 110] as const,
+  light: [244, 247, 251] as const,
+  border: [220, 226, 235] as const,
+  white: [255, 255, 255] as const,
+};
+
+function setFill(pdf: jsPDF, color: readonly [number, number, number]) {
+  pdf.setFillColor(color[0], color[1], color[2]);
+}
+
+function setText(pdf: jsPDF, color: readonly [number, number, number]) {
+  pdf.setTextColor(color[0], color[1], color[2]);
+}
+
+function setDraw(pdf: jsPDF, color: readonly [number, number, number]) {
+  pdf.setDrawColor(color[0], color[1], color[2]);
+}
 
 function dateText(value = new Date()) {
   return new Intl.DateTimeFormat("es-PE", {
@@ -49,14 +65,11 @@ function numberText(value: number) {
 
 function safeText(value: unknown) {
   const text = String(value ?? "").trim();
-
   return text || "—";
 }
 
-function valueText(value: unknown, unit?: string) {
-  const text = safeText(value);
-
-  return unit ? `${text} ${unit}` : text;
+function metricValue(value: unknown, unit?: string) {
+  return `${safeText(value)}${unit ? ` ${unit}` : ""}`;
 }
 
 function buildPayload(params: {
@@ -69,7 +82,7 @@ function buildPayload(params: {
   return {
     app: "SOLINT Business Suite",
     product: "People Analytics",
-    version: "3.0 Executive PDF Engine",
+    version: "4.0 Multi Page Executive PDF",
     exportedAt: new Date().toISOString(),
     domain: result.domain,
     filters,
@@ -118,14 +131,12 @@ export function downloadAnalyticsJson(params: {
 async function imageUrlToBase64(url: string): Promise<string | null> {
   try {
     const response = await fetch(url);
-
     if (!response.ok) return null;
 
     const blob = await response.blob();
 
     return await new Promise((resolve) => {
       const reader = new FileReader();
-
       reader.onloadend = () => resolve(String(reader.result));
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(blob);
@@ -135,98 +146,111 @@ async function imageUrlToBase64(url: string): Promise<string | null> {
   }
 }
 
-function addSolintBrand(pdf: jsPDF, logoBase64: string | null, x: number, y: number, w: number, h: number) {
+function paragraph(
+  pdf: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  lineHeight = 4.5
+) {
+  const lines = pdf.splitTextToSize(text, width);
+  pdf.text(lines, x, y);
+  return y + lines.length * lineHeight;
+}
+
+function drawSolintBrand(
+  pdf: jsPDF,
+  logoBase64: string | null,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  light = false
+) {
   if (logoBase64) {
     try {
-      pdf.addImage(logoBase64, "PNG", x, y, w, h, undefined, "FAST");
+      pdf.addImage(logoBase64, "PNG", x, y, width, height, undefined, "FAST");
       return;
     } catch {
-      // fallback
+      // text fallback
     }
   }
 
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(18);
-  pdf.setTextColor(BLUE2.r, BLUE2.g, BLUE2.b);
+  pdf.setFontSize(17);
+  setText(pdf, light ? BRAND.white : BRAND.blue2);
   pdf.text("SOLINT", x, y + 10);
-
-  pdf.setFontSize(8);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+  pdf.setFontSize(7.5);
+  setText(pdf, light ? [230, 240, 255] : BRAND.blue);
   pdf.text("Business Suite", x, y + 17);
 }
 
-function addPageBackground(pdf: jsPDF) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  pdf.setFillColor(LIGHT.r, LIGHT.g, LIGHT.b);
-  pdf.rect(0, 0, pageWidth, pageHeight, "F");
+function pageBackground(pdf: jsPDF) {
+  const w = pdf.internal.pageSize.getWidth();
+  const h = pdf.internal.pageSize.getHeight();
+  setFill(pdf, BRAND.light);
+  pdf.rect(0, 0, w, h, "F");
 }
 
-function addHeader(pdf: jsPDF, title: string, logoBase64: string | null) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
+function header(pdf: jsPDF, title: string, logoBase64: string | null) {
+  const w = pdf.internal.pageSize.getWidth();
 
-  pdf.setFillColor(BLUE.r, BLUE.g, BLUE.b);
-  pdf.rect(0, 0, pageWidth, 20, "F");
+  setFill(pdf, BRAND.blue);
+  pdf.rect(0, 0, w, 20, "F");
+  setFill(pdf, BRAND.orange);
+  pdf.rect(0, 20, w, 2.2, "F");
 
-  pdf.setFillColor(ORANGE.r, ORANGE.g, ORANGE.b);
-  pdf.rect(0, 20, pageWidth, 2.2, "F");
-
-  addSolintBrand(pdf, logoBase64, 10, 3, 32, 12);
+  drawSolintBrand(pdf, logoBase64, 11, 3.2, 30, 11.5, true);
 
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("SOLINT Business Suite · People Analytics", 50, 12);
+  pdf.setFontSize(9.5);
+  setText(pdf, BRAND.white);
+  pdf.text("SOLINT Business Suite · People Analytics", 48, 12);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  pdf.text(title, pageWidth - 12, 12, { align: "right" });
+  pdf.text(title, w - 12, 12, { align: "right" });
 }
 
-function addFooter(pdf: jsPDF, pageNumber: number) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+function footer(pdf: jsPDF, pageNumber: number) {
+  const w = pdf.internal.pageSize.getWidth();
+  const h = pdf.internal.pageSize.getHeight();
 
-  pdf.setDrawColor(220, 226, 235);
-  pdf.line(12, pageHeight - 16, pageWidth - 12, pageHeight - 16);
+  setDraw(pdf, BRAND.border);
+  pdf.line(12, h - 15, w - 12, h - 15);
 
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
-  pdf.text("SOLINT Business Suite", 12, pageHeight - 9);
-
-  pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7.5);
-  pdf.setTextColor(SLATE.r, SLATE.g, SLATE.b);
-  pdf.text("People Analytics · Reporte Ejecutivo", 56, pageHeight - 9);
-  pdf.text(`Página ${pageNumber}`, pageWidth - 12, pageHeight - 9, {
-    align: "right",
-  });
+  setText(pdf, BRAND.blue);
+  pdf.text("SOLINT Business Suite", 12, h - 8.5);
+
+  pdf.setFont("helvetica", "normal");
+  setText(pdf, BRAND.slate);
+  pdf.text("People Analytics · Reporte Ejecutivo", 52, h - 8.5);
+  pdf.text(`Página ${pageNumber}`, w - 12, h - 8.5, { align: "right" });
 }
 
-function addNewPage(pdf: jsPDF, title: string, pageNumber: number, logoBase64: string | null) {
+function newReportPage(
+  pdf: jsPDF,
+  title: string,
+  pageNumber: number,
+  logoBase64: string | null
+) {
   pdf.addPage();
-  addPageBackground(pdf);
-  addHeader(pdf, title, logoBase64);
-  addFooter(pdf, pageNumber);
+  pageBackground(pdf);
+  header(pdf, title, logoBase64);
+  footer(pdf, pageNumber);
 }
 
 function sectionTitle(pdf: jsPDF, title: string, x: number, y: number) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(15);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+  setText(pdf, BRAND.blue);
   pdf.text(title, x, y);
 
-  pdf.setFillColor(ORANGE.r, ORANGE.g, ORANGE.b);
-  pdf.roundedRect(x, y + 3.2, 30, 1.5, 0.7, 0.7, "F");
-}
-
-function paragraph(pdf: jsPDF, text: string, x: number, y: number, width: number, lineHeight = 5) {
-  const lines = pdf.splitTextToSize(text, width);
-  pdf.text(lines, x, y);
-
-  return y + lines.length * lineHeight;
+  setFill(pdf, BRAND.orange);
+  pdf.roundedRect(x, y + 3.2, 30, 1.4, 0.6, 0.6, "F");
 }
 
 function kpiCard(params: {
@@ -239,101 +263,126 @@ function kpiCard(params: {
   h?: number;
   accent?: "blue" | "orange" | "red" | "green";
 }) {
-  const { pdf, label, value, x, y, w, h = 26, accent = "blue" } = params;
+  const { pdf, label, value, x, y, w, h = 28, accent = "blue" } = params;
 
-  pdf.setFillColor(255, 255, 255);
+  setFill(pdf, BRAND.white);
   pdf.roundedRect(x, y, w, h, 5, 5, "F");
-  pdf.setDrawColor(220, 226, 235);
+  setDraw(pdf, BRAND.border);
   pdf.roundedRect(x, y, w, h, 5, 5, "S");
 
   const accentColor =
     accent === "orange"
-      ? ORANGE
+      ? BRAND.orange
       : accent === "red"
-        ? { r: 185, g: 28, b: 28 }
+        ? ([185, 28, 28] as const)
         : accent === "green"
-          ? { r: 4, g: 120, b: 87 }
-          : BLUE2;
+          ? ([4, 120, 87] as const)
+          : BRAND.blue2;
 
-  pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-  pdf.roundedRect(x, y, 4, h, 4, 4, "F");
+  setFill(pdf, accentColor);
+  pdf.roundedRect(x, y, 4.2, h, 4, 4, "F");
 
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(7);
-  pdf.setTextColor(100, 116, 139);
+  pdf.setFontSize(6.9);
+  setText(pdf, [100, 116, 139]);
   pdf.text(label.toUpperCase(), x + 8, y + 8);
 
   pdf.setFontSize(15);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
-  pdf.text(value, x + 8, y + 20);
+  setText(pdf, BRAND.blue);
+  pdf.text(value, x + 8, y + 20.5);
 }
 
-function addInfoBox(pdf: jsPDF, title: string, text: string, x: number, y: number, w: number, h: number) {
-  pdf.setFillColor(255, 255, 255);
+function infoBox(
+  pdf: jsPDF,
+  title: string,
+  text: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  setFill(pdf, BRAND.white);
   pdf.roundedRect(x, y, w, h, 5, 5, "F");
-  pdf.setDrawColor(220, 226, 235);
+  setDraw(pdf, BRAND.border);
   pdf.roundedRect(x, y, w, h, 5, 5, "S");
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+  setText(pdf, BRAND.blue);
   pdf.text(title, x + 6, y + 10);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  pdf.setTextColor(SLATE.r, SLATE.g, SLATE.b);
-  paragraph(pdf, text, x + 6, y + 18, w - 12, 4.2);
+  setText(pdf, BRAND.slate);
+  paragraph(pdf, text, x + 6, y + 18, w - 12, 4.3);
 }
 
-function addBulletList(pdf: jsPDF, title: string, items: string[], x: number, y: number, w: number, maxItems = 8) {
-  pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(x, y, w, 100, 5, 5, "F");
-  pdf.setDrawColor(220, 226, 235);
-  pdf.roundedRect(x, y, w, 100, 5, 5, "S");
+function bulletList(
+  pdf: jsPDF,
+  title: string,
+  items: string[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  maxItems = 8
+) {
+  setFill(pdf, BRAND.white);
+  pdf.roundedRect(x, y, w, h, 5, 5, "F");
+  setDraw(pdf, BRAND.border);
+  pdf.roundedRect(x, y, w, h, 5, 5, "S");
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+  setText(pdf, BRAND.blue);
   pdf.text(title, x + 6, y + 10);
 
-  let currentY = y + 20;
+  let currentY = y + 21;
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  pdf.setTextColor(SLATE.r, SLATE.g, SLATE.b);
+  setText(pdf, BRAND.slate);
 
   items.slice(0, maxItems).forEach((item) => {
-    pdf.setFillColor(ORANGE.r, ORANGE.g, ORANGE.b);
-    pdf.circle(x + 8, currentY - 1.5, 1.2, "F");
+    if (currentY > y + h - 8) return;
 
+    setFill(pdf, BRAND.orange);
+    pdf.circle(x + 8, currentY - 1.5, 1.1, "F");
     currentY = paragraph(pdf, item, x + 12, currentY, w - 18, 4.1) + 2;
   });
 }
 
-function addRanking(pdf: jsPDF, title: string, items: RankingItem[], x: number, y: number, w: number, h = 82) {
-  pdf.setFillColor(255, 255, 255);
+function rankingCard(
+  pdf: jsPDF,
+  title: string,
+  items: RankingItem[],
+  x: number,
+  y: number,
+  w: number,
+  h = 82
+) {
+  setFill(pdf, BRAND.white);
   pdf.roundedRect(x, y, w, h, 5, 5, "F");
-  pdf.setDrawColor(220, 226, 235);
+  setDraw(pdf, BRAND.border);
   pdf.roundedRect(x, y, w, h, 5, 5, "S");
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+  setText(pdf, BRAND.blue);
   pdf.text(title, x + 6, y + 10);
 
   const max = Math.max(...items.map((item) => item.total), 1);
 
   items.slice(0, 7).forEach((item, index) => {
     const rowY = y + 22 + index * 7.5;
+    const label = item.label.length > 30 ? `${item.label.slice(0, 30)}...` : item.label;
 
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7.2);
-    pdf.setTextColor(SLATE.r, SLATE.g, SLATE.b);
-
-    const label = item.label.length > 30 ? `${item.label.slice(0, 30)}...` : item.label;
+    setText(pdf, BRAND.slate);
     pdf.text(label, x + 6, rowY);
 
     pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+    setText(pdf, BRAND.blue);
     pdf.text(`${numberText(item.total)} · ${item.percentage}%`, x + w - 6, rowY, {
       align: "right",
     });
@@ -341,7 +390,8 @@ function addRanking(pdf: jsPDF, title: string, items: RankingItem[], x: number, 
     pdf.setFillColor(226, 232, 240);
     pdf.roundedRect(x + 6, rowY + 2.3, w - 12, 2.5, 1.2, 1.2, "F");
 
-    pdf.setFillColor(index === 0 ? ORANGE.r : BLUE2.r, index === 0 ? ORANGE.g : BLUE2.g, index === 0 ? ORANGE.b : BLUE2.b);
+    const bar = index === 0 ? BRAND.orange : BRAND.blue2;
+    setFill(pdf, bar);
     pdf.roundedRect(
       x + 6,
       rowY + 2.3,
@@ -352,6 +402,13 @@ function addRanking(pdf: jsPDF, title: string, items: RankingItem[], x: number, 
       "F"
     );
   });
+}
+
+function severityAccent(severity: string): "blue" | "orange" | "red" | "green" {
+  if (severity === "danger") return "red";
+  if (severity === "warning") return "orange";
+  if (severity === "success") return "green";
+  return "blue";
 }
 
 function addKpiPage(params: {
@@ -376,30 +433,21 @@ function addKpiPage(params: {
     const x = 12 + col * (cardW + 10);
     const cardY = y + row * 34;
 
-    const accent =
-      kpi.severity === "danger"
-        ? "red"
-        : kpi.severity === "warning"
-          ? "orange"
-          : kpi.severity === "success"
-            ? "green"
-            : "blue";
-
     kpiCard({
       pdf,
       label: kpi.label,
-      value: valueText(kpi.value, kpi.unit),
+      value: metricValue(kpi.value, kpi.unit),
       x,
       y: cardY,
       w: cardW,
       h: 28,
-      accent,
+      accent: severityAccent(kpi.severity),
     });
   });
 
-  y += Math.ceil(kpis.length / 2) * 34 + 4;
+  y += Math.ceil(kpis.length / 2) * 34 + 5;
 
-  addInfoBox(
+  infoBox(
     pdf,
     "Filtros aplicados",
     `Sede: ${filters.sede} · Área: ${filters.area} · Cargo: ${filters.cargo} · Estado: ${filters.estado} · Departamento: ${filters.departamento} · Provincia: ${filters.provincia}`,
@@ -411,7 +459,7 @@ function addKpiPage(params: {
 
   y += 38;
 
-  addInfoBox(
+  infoBox(
     pdf,
     "Alcance del análisis",
     `Se analizaron ${numberText(dashboard.totalRows)} registros, distribuidos en ${numberText(dashboard.totalSedes)} sedes, ${numberText(dashboard.totalAreas)} áreas, ${numberText(dashboard.totalCargos)} cargos y ${numberText(dashboard.totalDepartamentos)} departamentos. Este reporte se genera con los datos actualmente cargados en el navegador.`,
@@ -428,21 +476,21 @@ function addInsightsPage(pdf: jsPDF, result: AnalyticsResult) {
     (item) => `${item.priority} · ${item.title}: ${item.description}`
   );
 
-  addBulletList(pdf, "Insights principales", insights, 12, 34, 132, 10);
-  addBulletList(pdf, "Recomendaciones", recommendations, 154, 34, 132, 10);
+  bulletList(pdf, "Insights principales", insights, 12, 34, 132, 128, 10);
+  bulletList(pdf, "Recomendaciones", recommendations, 154, 34, 132, 128, 10);
 }
 
 function addRankingsPage(pdf: jsPDF, dashboard: PeopleDashboardResult) {
   sectionTitle(pdf, "Rankings ejecutivos", 12, 34);
 
-  addRanking(pdf, "Ranking por sede", dashboard.sedeRanking, 12, 48, 86);
-  addRanking(pdf, "Ranking por cargo", dashboard.cargoRanking, 105, 48, 86);
-  addRanking(pdf, "Ranking por área", dashboard.areaRanking, 198, 48, 88);
+  rankingCard(pdf, "Ranking por sede", dashboard.sedeRanking, 12, 48, 86);
+  rankingCard(pdf, "Ranking por cargo", dashboard.cargoRanking, 105, 48, 86);
+  rankingCard(pdf, "Ranking por área", dashboard.areaRanking, 198, 48, 88);
 
-  addRanking(pdf, "Distribución por estado", dashboard.estadoDistribution, 12, 140, 86, 62);
-  addRanking(pdf, "Ranking por departamento", dashboard.departamentoRanking, 105, 140, 86, 62);
+  rankingCard(pdf, "Distribución por estado", dashboard.estadoDistribution, 12, 140, 86, 62);
+  rankingCard(pdf, "Ranking por departamento", dashboard.departamentoRanking, 105, 140, 86, 62);
 
-  addInfoBox(
+  infoBox(
     pdf,
     "Lectura sugerida",
     "Los rankings permiten identificar concentraciones, distribución operacional y focos de análisis. Para conclusiones gerenciales, se recomienda cruzar estos resultados con rotación, ceses, antigüedad y supervisión.",
@@ -497,20 +545,20 @@ function addValidationPage(pdf: jsPDF, result: AnalyticsResult) {
   });
 
   let y = 90;
-  pdf.setFillColor(255, 255, 255);
+  setFill(pdf, BRAND.white);
   pdf.roundedRect(12, y, 274, 104, 5, 5, "F");
-  pdf.setDrawColor(220, 226, 235);
+  setDraw(pdf, BRAND.border);
   pdf.roundedRect(12, y, 274, 104, 5, 5, "S");
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
+  setText(pdf, BRAND.blue);
   pdf.text("Observaciones de validación", 20, y + 11);
 
   y += 24;
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  pdf.setTextColor(SLATE.r, SLATE.g, SLATE.b);
+  setText(pdf, BRAND.slate);
 
   const issues = result.validation.issues.length
     ? result.validation.issues.slice(0, 12).map((issue) => {
@@ -520,8 +568,8 @@ function addValidationPage(pdf: jsPDF, result: AnalyticsResult) {
     : ["No se detectaron errores críticos en la validación de datos."];
 
   issues.forEach((issue) => {
-    pdf.setFillColor(ORANGE.r, ORANGE.g, ORANGE.b);
-    pdf.circle(22, y - 1.5, 1.2, "F");
+    setFill(pdf, BRAND.orange);
+    pdf.circle(22, y - 1.5, 1.1, "F");
     y = paragraph(pdf, issue, 28, y, 248, 4.1) + 2;
   });
 }
@@ -544,57 +592,52 @@ export async function generateAnalyticsPdf(params: {
   const pageHeight = pdf.internal.pageSize.getHeight();
 
   // Portada
-  pdf.setFillColor(BLUE.r, BLUE.g, BLUE.b);
+  setFill(pdf, BRAND.blue);
   pdf.rect(0, 0, pageWidth, pageHeight, "F");
+  setFill(pdf, BRAND.orange);
+  pdf.rect(0, 0, 13, pageHeight, "F");
 
-  pdf.setFillColor(ORANGE.r, ORANGE.g, ORANGE.b);
-  pdf.rect(0, 0, 12, pageHeight, "F");
+  setFill(pdf, BRAND.white);
+  pdf.roundedRect(24, 23, 68, 28, 6, 6, "F");
+  drawSolintBrand(pdf, logoBase64, 31, 29, 49, 15);
 
-  pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(22, 22, 66, 28, 6, 6, "F");
-  addSolintBrand(pdf, logoBase64, 30, 28, 46, 14);
-
-  pdf.setTextColor(255, 255, 255);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(30);
-  pdf.text("Reporte Ejecutivo", 22, 88);
+  setText(pdf, BRAND.white);
+  pdf.text("Reporte Ejecutivo", 24, 88);
 
   pdf.setFontSize(17);
-  pdf.text("People Analytics", 22, 104);
+  pdf.text("People Analytics", 24, 104);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
-  pdf.text(`Emitido: ${dateText()}`, 22, 122);
-  pdf.text(`Fuente: ${result.metadata.source}`, 22, 131);
-  pdf.text(`Empresa / contexto: ${result.metadata.company || "No especificado"}`, 22, 140);
+  pdf.text(`Emitido: ${dateText()}`, 24, 122);
+  pdf.text(`Fuente: ${result.metadata.source}`, 24, 131);
+  pdf.text(`Empresa / contexto: ${result.metadata.company || "No especificado"}`, 24, 140);
 
-  pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(22, 158, 250, 32, 6, 6, "F");
+  setFill(pdf, BRAND.white);
+  pdf.roundedRect(24, 158, 250, 32, 6, 6, "F");
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
-  pdf.text("Preparado por SOLINT Business Suite", 32, 171);
+  setText(pdf, BRAND.blue);
+  pdf.text("Preparado por SOLINT Business Suite", 34, 171);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8.5);
-  pdf.setTextColor(SLATE.r, SLATE.g, SLATE.b);
-  pdf.text("Business Intelligence · Gestión Humana · Analítica Ejecutiva", 32, 181);
+  setText(pdf, BRAND.slate);
+  pdf.text("Business Intelligence · Gestión Humana · Analítica Ejecutiva", 34, 181);
 
-  // Página 2
-  addNewPage(pdf, "Indicadores principales", 2, logoBase64);
+  newReportPage(pdf, "Indicadores principales", 2, logoBase64);
   addKpiPage({ pdf, result, dashboard, filters });
 
-  // Página 3
-  addNewPage(pdf, "Insights y recomendaciones", 3, logoBase64);
+  newReportPage(pdf, "Insights y recomendaciones", 3, logoBase64);
   addInsightsPage(pdf, result);
 
-  // Página 4
-  addNewPage(pdf, "Rankings", 4, logoBase64);
+  newReportPage(pdf, "Rankings", 4, logoBase64);
   addRankingsPage(pdf, dashboard);
 
-  // Página 5
-  addNewPage(pdf, "Validación", 5, logoBase64);
+  newReportPage(pdf, "Validación", 5, logoBase64);
   addValidationPage(pdf, result);
 
   return pdf;
@@ -631,6 +674,8 @@ export function downloadAnalyticsPdf(params: {
   filters: PeopleFilters;
 }) {
   generateAnalyticsPdf(params).then((pdf) => {
-    pdf.save(`SOLINT_BUSINESS_SUITE_PEOPLE_ANALYTICS_${new Date().toISOString().slice(0, 10)}.pdf`);
+    pdf.save(
+      `SOLINT_BUSINESS_SUITE_PEOPLE_ANALYTICS_${new Date().toISOString().slice(0, 10)}.pdf`
+    );
   });
 }
