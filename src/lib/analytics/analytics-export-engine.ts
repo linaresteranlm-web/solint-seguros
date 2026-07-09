@@ -8,21 +8,16 @@ import {
   RankingItem,
 } from "@/lib/analytics/people-dashboard-engine";
 
-type RGB = readonly [number, number, number];
-
-const CORP_BLUE: RGB = [23, 59, 118];
-const CORP_DARK: RGB = [9, 30, 66];
-const CORP_ORANGE: RGB = [245, 130, 32];
-const CORP_SLATE: RGB = [80, 92, 110];
-const CORP_LIGHT: RGB = [244, 247, 251];
-const WHITE: RGB = [255, 255, 255];
-
-const PREPARED_BY = "Elaborado por SOLINT Business Suite © LC2026";
+const BLUE = [23, 59, 118] as const;
+const DARK = [9, 30, 66] as const;
+const ORANGE = [245, 130, 32] as const;
+const SLATE = [80, 92, 110] as const;
+const LIGHT = [244, 247, 251] as const;
 
 export type AnalyticsExportPayload = {
   app: "CORPRISEG";
   product: "People Analytics";
-  preparedBy: typeof PREPARED_BY;
+  preparedBy: "SOLINT Business Suite © LC2026";
   version: string;
   exportedAt: string;
   domain: string;
@@ -42,52 +37,51 @@ export type AnalyticsExportPayload = {
   };
 };
 
-function setFill(pdf: jsPDF, color: RGB) {
-  pdf.setFillColor(color[0], color[1], color[2]);
-}
-
-function setText(pdf: jsPDF, color: RGB) {
-  pdf.setTextColor(color[0], color[1], color[2]);
-}
-
-function setDraw(pdf: jsPDF, color: RGB) {
-  pdf.setDrawColor(color[0], color[1], color[2]);
-}
-
-function formatDate(value = new Date()) {
+function dateText(value = new Date()) {
   return new Intl.DateTimeFormat("es-PE", {
     dateStyle: "full",
     timeStyle: "short",
   }).format(value);
 }
 
-function formatNumber(value: number) {
+function numberText(value: number) {
   return new Intl.NumberFormat("es-PE").format(value);
 }
 
-function safeText(value: unknown) {
-  const output = String(value ?? "").trim();
-  return output || "—";
+function text(value: unknown) {
+  const v = String(value ?? "").trim();
+  return v || "—";
 }
 
 function valueText(value: unknown, unit?: string) {
-  return unit ? `${safeText(value)} ${unit}` : safeText(value);
+  return unit ? `${text(value)} ${unit}` : text(value);
 }
 
-function buildPayload({
-  result,
-  dashboard,
-  filters,
-}: {
+function normalizeText(value: unknown) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function findKpi(result: AnalyticsResult, keywords: string[]) {
+  return result.kpis.find((kpi) => {
+    const haystack = normalizeText(`${kpi.id ?? ""} ${kpi.label ?? ""}`);
+    return keywords.some((keyword) => haystack.includes(keyword));
+  });
+}
+
+function buildPayload(params: {
   result: AnalyticsResult;
   dashboard: PeopleDashboardResult;
   filters: PeopleFilters;
 }): AnalyticsExportPayload {
+  const { result, dashboard, filters } = params;
   return {
     app: "CORPRISEG",
     product: "People Analytics",
-    preparedBy: PREPARED_BY,
-    version: "4.1 CORPRISEG Stable PDF Engine",
+    preparedBy: "SOLINT Business Suite © LC2026",
+    version: "5.0 CORPRISEG Rotation Report Page",
     exportedAt: new Date().toISOString(),
     domain: result.domain,
     filters,
@@ -116,29 +110,21 @@ export function downloadAnalyticsJson(params: {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json;charset=utf-8",
   });
-
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-
   link.href = url;
-  link.download = `CORPRISEG_PEOPLE_ANALYTICS_${new Date()
-    .toISOString()
-    .slice(0, 10)}.json`;
-
+  link.download = `CORPRISEG_PEOPLE_ANALYTICS_${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();
-
   URL.revokeObjectURL(url);
 }
 
-async function loadImageBase64(url: string): Promise<string | null> {
+async function imageUrlToBase64(url: string): Promise<string | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
-
     const blob = await response.blob();
-
     return await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(String(reader.result));
@@ -150,488 +136,295 @@ async function loadImageBase64(url: string): Promise<string | null> {
   }
 }
 
-function drawBrand(
-  pdf: jsPDF,
-  logo: string | null,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  light = false
-) {
+function brand(pdf: jsPDF, logo: string | null, x: number, y: number, w: number, h: number, light = false) {
   if (logo) {
     try {
       pdf.addImage(logo, "PNG", x, y, w, h, undefined, "FAST");
       return;
-    } catch {
-      // fallback textual
-    }
+    } catch {}
   }
-
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
-  setText(pdf, light ? WHITE : CORP_BLUE);
+  pdf.setTextColor(light ? 255 : BLUE[0], light ? 255 : BLUE[1], light ? 255 : BLUE[2]);
   pdf.text("CORPRISEG", x, y + 10);
-
-  pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7);
-  setText(pdf, light ? [230, 238, 247] : CORP_SLATE);
+  pdf.setTextColor(light ? 230 : SLATE[0], light ? 238 : SLATE[1], light ? 247 : SLATE[2]);
   pdf.text("SEGURIDAD · PREVENCIÓN · CONFIANZA", x, y + 17);
 }
 
-function drawBackground(pdf: jsPDF) {
-  setFill(pdf, CORP_LIGHT);
-  pdf.rect(
-    0,
-    0,
-    pdf.internal.pageSize.getWidth(),
-    pdf.internal.pageSize.getHeight(),
-    "F"
-  );
+function bg(pdf: jsPDF) {
+  pdf.setFillColor(LIGHT[0], LIGHT[1], LIGHT[2]);
+  pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), "F");
 }
 
-function drawHeader(pdf: jsPDF, title: string, logo: string | null) {
-  const width = pdf.internal.pageSize.getWidth();
-
-  setFill(pdf, CORP_BLUE);
-  pdf.rect(0, 0, width, 21, "F");
-
-  setFill(pdf, CORP_ORANGE);
-  pdf.rect(0, 21, width, 2.2, "F");
-
-  drawBrand(pdf, logo, 10, 3.6, 36, 13, true);
-
+function header(pdf: jsPDF, title: string, logo: string | null) {
+  const w = pdf.internal.pageSize.getWidth();
+  pdf.setFillColor(BLUE[0], BLUE[1], BLUE[2]);
+  pdf.rect(0, 0, w, 21, "F");
+  pdf.setFillColor(ORANGE[0], ORANGE[1], ORANGE[2]);
+  pdf.rect(0, 21, w, 2.2, "F");
+  brand(pdf, logo, 10, 3.6, 36, 13, true);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  setText(pdf, WHITE);
+  pdf.setTextColor(255, 255, 255);
   pdf.text("CORPRISEG · Reporte Gerencial", 52, 12);
-
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  pdf.text(title, width - 12, 12, { align: "right" });
+  pdf.text(title, w - 12, 12, { align: "right" });
 }
 
-function drawFooter(pdf: jsPDF, page: number) {
-  const width = pdf.internal.pageSize.getWidth();
-  const height = pdf.internal.pageSize.getHeight();
-
-  setDraw(pdf, [220, 226, 235]);
-  pdf.line(12, height - 16, width - 12, height - 16);
-
+function footer(pdf: jsPDF, page: number) {
+  const w = pdf.internal.pageSize.getWidth();
+  const h = pdf.internal.pageSize.getHeight();
+  pdf.setDrawColor(220, 226, 235);
+  pdf.line(12, h - 16, w - 12, h - 16);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8);
-  setText(pdf, CORP_BLUE);
-  pdf.text("CORPRISEG", 12, height - 9);
-
+  pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+  pdf.text("CORPRISEG", 12, h - 9);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7.5);
-  setText(pdf, CORP_SLATE);
-  pdf.text("People Analytics · Reporte Ejecutivo", 40, height - 9);
-  pdf.text(PREPARED_BY, width / 2, height - 9, { align: "center" });
-  pdf.text(`Página ${page}`, width - 12, height - 9, { align: "right" });
+  pdf.setTextColor(SLATE[0], SLATE[1], SLATE[2]);
+  pdf.text("People Analytics · Reporte Ejecutivo", 40, h - 9);
+  pdf.text("Elaborado por SOLINT Business Suite © LC2026", w / 2, h - 9, { align: "center" });
+  pdf.text(`Página ${page}`, w - 12, h - 9, { align: "right" });
 }
 
-function addPage(pdf: jsPDF, title: string, page: number, logo: string | null) {
+function newPage(pdf: jsPDF, title: string, page: number, logo: string | null) {
   pdf.addPage();
-  drawBackground(pdf);
-  drawHeader(pdf, title, logo);
-  drawFooter(pdf, page);
+  bg(pdf);
+  header(pdf, title, logo);
+  footer(pdf, page);
 }
 
-function drawSectionTitle(pdf: jsPDF, title: string, x: number, y: number) {
+function section(pdf: jsPDF, title: string, x: number, y: number) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(15);
-  setText(pdf, CORP_BLUE);
+  pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
   pdf.text(title, x, y);
-
-  setFill(pdf, CORP_ORANGE);
+  pdf.setFillColor(ORANGE[0], ORANGE[1], ORANGE[2]);
   pdf.roundedRect(x, y + 3.2, 30, 1.5, 0.7, 0.7, "F");
 }
 
-function wrappedText(
-  pdf: jsPDF,
-  content: string,
-  x: number,
-  y: number,
-  width: number,
-  lineHeight = 5
-) {
-  const lines = pdf.splitTextToSize(content, width);
+function wrap(pdf: jsPDF, value: string, x: number, y: number, width: number, lineHeight = 5) {
+  const lines = pdf.splitTextToSize(value, width);
   pdf.text(lines, x, y);
   return y + lines.length * lineHeight;
 }
 
-function accentColor(severity?: string): RGB {
-  if (severity === "danger") return [185, 28, 28];
-  if (severity === "warning") return CORP_ORANGE;
-  if (severity === "success") return [4, 120, 87];
-  return CORP_BLUE;
-}
-
-function drawKpiCard({
-  pdf,
-  label,
-  value,
-  x,
-  y,
-  width,
-  color = CORP_BLUE,
-}: {
-  pdf: jsPDF;
-  label: string;
-  value: string;
-  x: number;
-  y: number;
-  width: number;
-  color?: RGB;
-}) {
-  setFill(pdf, WHITE);
-  pdf.roundedRect(x, y, width, 28, 5, 5, "F");
-  setDraw(pdf, [220, 226, 235]);
-  pdf.roundedRect(x, y, width, 28, 5, 5, "S");
-
-  setFill(pdf, color);
+function kpi(pdf: jsPDF, label: string, value: string, x: number, y: number, w: number, accent: "blue" | "orange" | "red" | "green" = "blue") {
+  pdf.setFillColor(255, 255, 255);
+  pdf.roundedRect(x, y, w, 28, 5, 5, "F");
+  pdf.setDrawColor(220, 226, 235);
+  pdf.roundedRect(x, y, w, 28, 5, 5, "S");
+  const color = accent === "orange" ? ORANGE : accent === "red" ? [185, 28, 28] as const : accent === "green" ? [4, 120, 87] as const : BLUE;
+  pdf.setFillColor(color[0], color[1], color[2]);
   pdf.roundedRect(x, y, 4, 28, 4, 4, "F");
-
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(7);
-  setText(pdf, [100, 116, 139]);
+  pdf.setTextColor(100, 116, 139);
   pdf.text(label.toUpperCase(), x + 8, y + 8);
-
   pdf.setFontSize(15);
-  setText(pdf, CORP_DARK);
+  pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
   pdf.text(value, x + 8, y + 20);
 }
 
-function drawInfoBox({
-  pdf,
-  title,
-  body,
-  x,
-  y,
-  width,
-  height,
-}: {
-  pdf: jsPDF;
-  title: string;
-  body: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}) {
-  setFill(pdf, WHITE);
-  pdf.roundedRect(x, y, width, height, 5, 5, "F");
-  setDraw(pdf, [220, 226, 235]);
-  pdf.roundedRect(x, y, width, height, 5, 5, "S");
-
+function box(pdf: jsPDF, title: string, body: string, x: number, y: number, w: number, h: number) {
+  pdf.setFillColor(255, 255, 255);
+  pdf.roundedRect(x, y, w, h, 5, 5, "F");
+  pdf.setDrawColor(220, 226, 235);
+  pdf.roundedRect(x, y, w, h, 5, 5, "S");
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  setText(pdf, CORP_BLUE);
+  pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
   pdf.text(title, x + 6, y + 10);
-
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  setText(pdf, CORP_SLATE);
-  wrappedText(pdf, body, x + 6, y + 18, width - 12, 4.2);
+  pdf.setTextColor(SLATE[0], SLATE[1], SLATE[2]);
+  wrap(pdf, body, x + 6, y + 18, w - 12, 4.2);
 }
 
-function drawBulletPanel({
-  pdf,
-  title,
-  items,
-  x,
-  y,
-  width,
-}: {
-  pdf: jsPDF;
-  title: string;
-  items: string[];
-  x: number;
-  y: number;
-  width: number;
-}) {
-  setFill(pdf, WHITE);
-  pdf.roundedRect(x, y, width, 100, 5, 5, "F");
-  setDraw(pdf, [220, 226, 235]);
-  pdf.roundedRect(x, y, width, 100, 5, 5, "S");
-
+function bullets(pdf: jsPDF, title: string, items: string[], x: number, y: number, w: number) {
+  pdf.setFillColor(255, 255, 255);
+  pdf.roundedRect(x, y, w, 100, 5, 5, "F");
+  pdf.setDrawColor(220, 226, 235);
+  pdf.roundedRect(x, y, w, 100, 5, 5, "S");
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
-  setText(pdf, CORP_BLUE);
+  pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
   pdf.text(title, x + 6, y + 10);
-
-  let currentY = y + 20;
-
+  let cy = y + 20;
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
-  setText(pdf, CORP_SLATE);
-
+  pdf.setTextColor(SLATE[0], SLATE[1], SLATE[2]);
   items.slice(0, 10).forEach((item) => {
-    setFill(pdf, CORP_ORANGE);
-    pdf.circle(x + 8, currentY - 1.5, 1.2, "F");
-    currentY = wrappedText(pdf, item, x + 12, currentY, width - 18, 4.1) + 2;
+    pdf.setFillColor(ORANGE[0], ORANGE[1], ORANGE[2]);
+    pdf.circle(x + 8, cy - 1.5, 1.2, "F");
+    cy = wrap(pdf, item, x + 12, cy, w - 18, 4.1) + 2;
   });
 }
 
-function drawRankingPanel({
-  pdf,
-  title,
-  items,
-  x,
-  y,
-  width,
-  height = 82,
-}: {
-  pdf: jsPDF;
-  title: string;
-  items: RankingItem[];
-  x: number;
-  y: number;
-  width: number;
-  height?: number;
-}) {
-  setFill(pdf, WHITE);
-  pdf.roundedRect(x, y, width, height, 5, 5, "F");
-  setDraw(pdf, [220, 226, 235]);
-  pdf.roundedRect(x, y, width, height, 5, 5, "S");
-
+function ranking(pdf: jsPDF, title: string, items: RankingItem[], x: number, y: number, w: number, h = 82) {
+  pdf.setFillColor(255, 255, 255);
+  pdf.roundedRect(x, y, w, h, 5, 5, "F");
+  pdf.setDrawColor(220, 226, 235);
+  pdf.roundedRect(x, y, w, h, 5, 5, "S");
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  setText(pdf, CORP_BLUE);
+  pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
   pdf.text(title, x + 6, y + 10);
-
   const max = Math.max(...items.map((item) => item.total), 1);
-
   items.slice(0, 7).forEach((item, index) => {
-    const rowY = y + 22 + index * 7.5;
-    const label =
-      item.label.length > 30 ? `${item.label.slice(0, 30)}...` : item.label;
-
+    const ry = y + 22 + index * 7.5;
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7.2);
-    setText(pdf, CORP_SLATE);
-    pdf.text(label, x + 6, rowY);
-
+    pdf.setTextColor(SLATE[0], SLATE[1], SLATE[2]);
+    const label = item.label.length > 30 ? `${item.label.slice(0, 30)}...` : item.label;
+    pdf.text(label, x + 6, ry);
     pdf.setFont("helvetica", "bold");
-    setText(pdf, CORP_BLUE);
-    pdf.text(`${formatNumber(item.total)} · ${item.percentage}%`, x + width - 6, rowY, {
-      align: "right",
-    });
-
-    setFill(pdf, [226, 232, 240]);
-    pdf.roundedRect(x + 6, rowY + 2.3, width - 12, 2.5, 1.2, 1.2, "F");
-
-    setFill(pdf, index === 0 ? CORP_ORANGE : CORP_BLUE);
-    pdf.roundedRect(
-      x + 6,
-      rowY + 2.3,
-      Math.max(((width - 12) * item.total) / max, 5),
-      2.5,
-      1.2,
-      1.2,
-      "F"
-    );
+    pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+    pdf.text(`${numberText(item.total)} · ${item.percentage}%`, x + w - 6, ry, { align: "right" });
+    pdf.setFillColor(226, 232, 240);
+    pdf.roundedRect(x + 6, ry + 2.3, w - 12, 2.5, 1.2, 1.2, "F");
+    if (index === 0) {
+      pdf.setFillColor(ORANGE[0], ORANGE[1], ORANGE[2]);
+    } else {
+      pdf.setFillColor(BLUE[0], BLUE[1], BLUE[2]);
+    }
+    pdf.roundedRect(x + 6, ry + 2.3, Math.max(((w - 12) * item.total) / max, 5), 2.5, 1.2, 1.2, "F");
   });
 }
 
-function drawKpiPage(
-  pdf: jsPDF,
-  result: AnalyticsResult,
-  dashboard: PeopleDashboardResult,
-  filters: PeopleFilters
-) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-
+function kpiPage(pdf: jsPDF, result: AnalyticsResult, dashboard: PeopleDashboardResult, filters: PeopleFilters) {
+  const pageW = pdf.internal.pageSize.getWidth();
   let y = 34;
-  drawSectionTitle(pdf, "Indicadores principales", 12, y);
+  section(pdf, "Indicadores principales", 12, y);
   y += 12;
-
-  const kpis = result.kpis.slice(0, 8);
-  const cardWidth = (pageWidth - 34) / 2;
-
-  kpis.forEach((item, index) => {
+  const cardW = (pageW - 34) / 2;
+  result.kpis.slice(0, 8).forEach((item, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
-
-    drawKpiCard({
-      pdf,
-      label: item.label,
-      value: valueText(item.value, item.unit),
-      x: 12 + col * (cardWidth + 10),
-      y: y + row * 34,
-      width: cardWidth,
-      color: accentColor(item.severity),
-    });
+    const accent = item.severity === "danger" ? "red" : item.severity === "warning" ? "orange" : item.severity === "success" ? "green" : "blue";
+    kpi(pdf, item.label, valueText(item.value, item.unit), 12 + col * (cardW + 10), y + row * 34, cardW, accent);
   });
-
-  y += Math.ceil(kpis.length / 2) * 34 + 4;
-
-  drawInfoBox({
-    pdf,
-    title: "Filtros aplicados",
-    body: `Sede: ${filters.sede} · Área: ${filters.area} · Cargo: ${filters.cargo} · Estado: ${filters.estado} · Departamento: ${filters.departamento} · Provincia: ${filters.provincia}`,
-    x: 12,
-    y,
-    width: pageWidth - 24,
-    height: 28,
-  });
-
+  y += Math.ceil(result.kpis.slice(0, 8).length / 2) * 34 + 4;
+  box(pdf, "Filtros aplicados", `Sede: ${filters.sede} · Área: ${filters.area} · Cargo: ${filters.cargo} · Estado: ${filters.estado} · Departamento: ${filters.departamento} · Provincia: ${filters.provincia}`, 12, y, pageW - 24, 28);
   y += 38;
-
-  drawInfoBox({
-    pdf,
-    title: "Alcance del análisis",
-    body: `Se analizaron ${formatNumber(dashboard.totalRows)} registros, distribuidos en ${formatNumber(dashboard.totalSedes)} sedes, ${formatNumber(dashboard.totalAreas)} áreas, ${formatNumber(dashboard.totalCargos)} cargos y ${formatNumber(dashboard.totalDepartamentos)} departamentos. Este reporte se presenta para gerencia y/o jefaturas de CORPRISEG.`,
-    x: 12,
-    y,
-    width: pageWidth - 24,
-    height: 34,
-  });
+  box(pdf, "Alcance del análisis", `Se analizaron ${numberText(dashboard.totalRows)} registros, distribuidos en ${numberText(dashboard.totalSedes)} sedes, ${numberText(dashboard.totalAreas)} áreas, ${numberText(dashboard.totalCargos)} cargos y ${numberText(dashboard.totalDepartamentos)} departamentos. Este reporte se presenta para gerencia y/o jefaturas de CORPRISEG.`, 12, y, pageW - 24, 34);
 }
 
-function drawInsightsPage(pdf: jsPDF, result: AnalyticsResult) {
-  drawBulletPanel({
-    pdf,
-    title: "Insights principales",
-    items: result.insights.map((item) => `${item.title}: ${item.description}`),
-    x: 12,
-    y: 34,
-    width: 132,
-  });
+function rotationPage(pdf: jsPDF, result: AnalyticsResult, dashboard: PeopleDashboardResult) {
+  const rotation = findKpi(result, ["rotacion", "rotation"]);
+  const exits = findKpi(result, ["cese", "ceses", "baja", "exits"]);
+  const hires = findKpi(result, ["ingreso", "ingresos", "alta", "hires"]);
+  const headcount = findKpi(result, ["headcount", "personal", "dotacion"]);
 
-  drawBulletPanel({
+  section(pdf, "Indicadores de Rotación", 12, 34);
+
+  kpi(
     pdf,
-    title: "Recomendaciones",
-    items: result.recommendations.map(
-      (item) => `${item.priority} · ${item.title}: ${item.description}`
-    ),
-    x: 154,
-    y: 34,
-    width: 132,
-  });
+    rotation?.label ?? "Rotación",
+    rotation ? valueText(rotation.value, rotation.unit) : "No detectado",
+    12,
+    50,
+    64,
+    "orange"
+  );
+
+  kpi(
+    pdf,
+    exits?.label ?? "Ceses",
+    exits ? valueText(exits.value, exits.unit) : "No detectado",
+    84,
+    50,
+    54,
+    "red"
+  );
+
+  kpi(
+    pdf,
+    hires?.label ?? "Ingresos",
+    hires ? valueText(hires.value, hires.unit) : "No detectado",
+    146,
+    50,
+    54,
+    "green"
+  );
+
+  kpi(
+    pdf,
+    headcount?.label ?? "Headcount",
+    headcount ? valueText(headcount.value, headcount.unit) : numberText(dashboard.totalRows),
+    208,
+    50,
+    66,
+    "blue"
+  );
+
+  box(
+    pdf,
+    "Fórmula de referencia",
+    "Rotación = Ceses del periodo / Headcount promedio del periodo × 100. Para reportes mensuales, el cálculo debe realizarse por cada mes usando el headcount promedio mensual.",
+    12,
+    92,
+    128,
+    42
+  );
+
+  box(
+    pdf,
+    "Lectura ejecutiva",
+    rotation && exits
+      ? `El análisis identifica ${valueText(rotation.value, rotation.unit)} como indicador de rotación y ${valueText(exits.value, exits.unit)} asociado a ceses/bajas. Para gerencia se recomienda revisar las sedes, cargos o áreas con mayor concentración de salidas.`
+      : "El sistema no detectó todos los KPIs de rotación en el análisis general. Para enero-junio, usar el módulo especializado de Indicadores de Rotación CORPRISEG.",
+    150,
+    92,
+    124,
+    42
+  );
+
+  ranking(pdf, "Sedes con mayor concentración", dashboard.sedeRanking, 12, 148, 86, 58);
+  ranking(pdf, "Cargos con mayor concentración", dashboard.cargoRanking, 105, 148, 86, 58);
+
+  box(
+    pdf,
+    "Siguiente acción sugerida",
+    "Validar enero-junio con el módulo de rotación mensual para obtener rotación por mes, acumulado, ranking de sedes, ranking de cargos y recomendaciones específicas para jefaturas.",
+    198,
+    148,
+    76,
+    58
+  );
 }
 
-function drawRankingsPage(pdf: jsPDF, dashboard: PeopleDashboardResult) {
-  drawSectionTitle(pdf, "Rankings ejecutivos", 12, 34);
-
-  drawRankingPanel({
-    pdf,
-    title: "Ranking por sede",
-    items: dashboard.sedeRanking,
-    x: 12,
-    y: 48,
-    width: 86,
-  });
-
-  drawRankingPanel({
-    pdf,
-    title: "Ranking por cargo",
-    items: dashboard.cargoRanking,
-    x: 105,
-    y: 48,
-    width: 86,
-  });
-
-  drawRankingPanel({
-    pdf,
-    title: "Ranking por área",
-    items: dashboard.areaRanking,
-    x: 198,
-    y: 48,
-    width: 88,
-  });
-
-  drawRankingPanel({
-    pdf,
-    title: "Distribución por estado",
-    items: dashboard.estadoDistribution,
-    x: 12,
-    y: 140,
-    width: 86,
-    height: 62,
-  });
-
-  drawRankingPanel({
-    pdf,
-    title: "Ranking por departamento",
-    items: dashboard.departamentoRanking,
-    x: 105,
-    y: 140,
-    width: 86,
-    height: 62,
-  });
-
-  drawInfoBox({
-    pdf,
-    title: "Lectura sugerida",
-    body: "Los rankings permiten identificar concentraciones, distribución operacional y focos de análisis para gerencia y jefaturas. Se recomienda cruzar estos resultados con rotación, ceses, antigüedad y supervisión.",
-    x: 198,
-    y: 140,
-    width: 88,
-    height: 62,
-  });
+function insightsPage(pdf: jsPDF, result: AnalyticsResult) {
+  bullets(pdf, "Insights principales", result.insights.map((i) => `${i.title}: ${i.description}`), 12, 34, 132);
+  bullets(pdf, "Recomendaciones", result.recommendations.map((i) => `${i.priority} · ${i.title}: ${i.description}`), 154, 34, 132);
 }
 
-function drawValidationPage(pdf: jsPDF, result: AnalyticsResult) {
-  drawSectionTitle(pdf, "Calidad de datos y validación", 12, 34);
+function rankingsPage(pdf: jsPDF, dashboard: PeopleDashboardResult) {
+  section(pdf, "Rankings ejecutivos", 12, 34);
+  ranking(pdf, "Ranking por sede", dashboard.sedeRanking, 12, 48, 86);
+  ranking(pdf, "Ranking por cargo", dashboard.cargoRanking, 105, 48, 86);
+  ranking(pdf, "Ranking por área", dashboard.areaRanking, 198, 48, 88);
+  ranking(pdf, "Distribución por estado", dashboard.estadoDistribution, 12, 140, 86, 62);
+  ranking(pdf, "Ranking por departamento", dashboard.departamentoRanking, 105, 140, 86, 62);
+  box(pdf, "Lectura sugerida", "Los rankings permiten identificar concentraciones, distribución operacional y focos de análisis para gerencia y jefaturas. Se recomienda cruzar estos resultados con rotación, ceses, antigüedad y supervisión.", 198, 140, 88, 62);
+}
 
-  drawKpiCard({
-    pdf,
-    label: "Total registros",
-    value: formatNumber(result.validation.totalRows),
-    x: 12,
-    y: 48,
-    width: 60,
-  });
-
-  drawKpiCard({
-    pdf,
-    label: "Errores",
-    value: formatNumber(result.validation.errors),
-    x: 82,
-    y: 48,
-    width: 48,
-    color: result.validation.errors > 0 ? [185, 28, 28] : [4, 120, 87],
-  });
-
-  drawKpiCard({
-    pdf,
-    label: "Advertencias",
-    value: formatNumber(result.validation.warnings),
-    x: 140,
-    y: 48,
-    width: 56,
-    color: result.validation.warnings > 0 ? CORP_ORANGE : [4, 120, 87],
-  });
-
-  drawKpiCard({
-    pdf,
-    label: "Estado",
-    value: result.validation.valid ? "Válido" : "Revisar",
-    x: 206,
-    y: 48,
-    width: 60,
-    color: result.validation.valid ? [4, 120, 87] : CORP_ORANGE,
-  });
-
+function validationPage(pdf: jsPDF, result: AnalyticsResult) {
+  section(pdf, "Calidad de datos y validación", 12, 34);
+  kpi(pdf, "Total registros", numberText(result.validation.totalRows), 12, 48, 60, "blue");
+  kpi(pdf, "Errores", numberText(result.validation.errors), 82, 48, 48, result.validation.errors > 0 ? "red" : "green");
+  kpi(pdf, "Advertencias", numberText(result.validation.warnings), 140, 48, 56, result.validation.warnings > 0 ? "orange" : "green");
+  kpi(pdf, "Estado", result.validation.valid ? "Válido" : "Revisar", 206, 48, 60, result.validation.valid ? "green" : "orange");
   const issues = result.validation.issues.length
     ? result.validation.issues.slice(0, 12).map((issue) => {
         const location = issue.row ? `Fila ${issue.row}` : "Registro";
-        return `${issue.severity.toUpperCase()} · ${location}${
-          issue.column ? ` · ${issue.column}` : ""
-        }: ${issue.title} - ${issue.description}`;
+        return `${issue.severity.toUpperCase()} · ${location}${issue.column ? ` · ${issue.column}` : ""}: ${issue.title} - ${issue.description}`;
       })
     : ["No se detectaron errores críticos en la validación de datos."];
-
-  drawBulletPanel({
-    pdf,
-    title: "Observaciones de validación",
-    items: issues,
-    x: 12,
-    y: 90,
-    width: 274,
-  });
+  bullets(pdf, "Observaciones de validación", issues, 12, 90, 274);
 }
 
 export async function generateAnalyticsPdf(params: {
@@ -640,67 +433,55 @@ export async function generateAnalyticsPdf(params: {
   filters: PeopleFilters;
 }) {
   const { result, dashboard, filters } = params;
-  const logo = await loadImageBase64("/images/corpriseg-logo.png");
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const logo = await imageUrlToBase64("/images/corpriseg-logo.png");
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
 
-  const pdf = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: "a4",
-  });
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  setFill(pdf, CORP_BLUE);
-  pdf.rect(0, 0, pageWidth, pageHeight, "F");
-
-  setFill(pdf, CORP_ORANGE);
-  pdf.rect(0, 0, 12, pageHeight, "F");
-
-  setFill(pdf, WHITE);
+  pdf.setFillColor(BLUE[0], BLUE[1], BLUE[2]);
+  pdf.rect(0, 0, pageW, pageH, "F");
+  pdf.setFillColor(ORANGE[0], ORANGE[1], ORANGE[2]);
+  pdf.rect(0, 0, 12, pageH, "F");
+  pdf.setFillColor(255, 255, 255);
   pdf.roundedRect(22, 22, 76, 32, 6, 6, "F");
-  drawBrand(pdf, logo, 31, 29, 56, 15);
-
-  setText(pdf, WHITE);
+  brand(pdf, logo, 31, 29, 56, 15);
+  pdf.setTextColor(255, 255, 255);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(30);
   pdf.text("Reporte Ejecutivo", 22, 88);
-
   pdf.setFontSize(17);
   pdf.text("People Analytics", 22, 104);
-
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
   pdf.text("Presentado a Gerencia y/o Jefaturas de CORPRISEG", 22, 116);
-  pdf.text(`Emitido: ${formatDate()}`, 22, 129);
+  pdf.text(`Emitido: ${dateText()}`, 22, 129);
   pdf.text(`Fuente: ${result.metadata.source}`, 22, 138);
   pdf.text("Empresa / contexto: CORPRISEG", 22, 147);
-
-  setFill(pdf, WHITE);
+  pdf.setFillColor(255, 255, 255);
   pdf.roundedRect(22, 164, 250, 34, 6, 6, "F");
-
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  setText(pdf, CORP_BLUE);
+  pdf.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
   pdf.text("Documento gerencial preparado para CORPRISEG", 32, 177);
-
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8.5);
-  setText(pdf, CORP_SLATE);
-  pdf.text(PREPARED_BY, 32, 187);
+  pdf.setTextColor(SLATE[0], SLATE[1], SLATE[2]);
+  pdf.text("Elaborado por SOLINT Business Suite © LC2026", 32, 187);
 
-  addPage(pdf, "Indicadores principales", 2, logo);
-  drawKpiPage(pdf, result, dashboard, filters);
+  newPage(pdf, "Indicadores principales", 2, logo);
+  kpiPage(pdf, result, dashboard, filters);
 
-  addPage(pdf, "Insights y recomendaciones", 3, logo);
-  drawInsightsPage(pdf, result);
+  newPage(pdf, "Indicadores de rotación", 3, logo);
+  rotationPage(pdf, result, dashboard);
 
-  addPage(pdf, "Rankings", 4, logo);
-  drawRankingsPage(pdf, dashboard);
+  newPage(pdf, "Insights y recomendaciones", 4, logo);
+  insightsPage(pdf, result);
 
-  addPage(pdf, "Validación", 5, logo);
-  drawValidationPage(pdf, result);
+  newPage(pdf, "Rankings", 5, logo);
+  rankingsPage(pdf, dashboard);
 
+  newPage(pdf, "Validación", 6, logo);
+  validationPage(pdf, result);
   return pdf;
 }
 
@@ -710,21 +491,13 @@ export function openAnalyticsPdf(params: {
   filters: PeopleFilters;
 }) {
   const reportWindow = window.open("", "_blank", "noopener,noreferrer");
-
   if (reportWindow) {
-    reportWindow.document.write(
-      "<p style='font-family:Arial;padding:24px'>Generando reporte CORPRISEG...</p>"
-    );
+    reportWindow.document.write("<p style='font-family:Arial;padding:24px'>Generando reporte CORPRISEG...</p>");
   }
-
   generateAnalyticsPdf(params).then((pdf) => {
     const url = URL.createObjectURL(pdf.output("blob"));
-
-    if (reportWindow) {
-      reportWindow.location.href = url;
-    } else {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
+    if (reportWindow) reportWindow.location.href = url;
+    else window.open(url, "_blank", "noopener,noreferrer");
   });
 }
 
